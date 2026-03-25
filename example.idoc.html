@@ -1,0 +1,2731 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>iDoc Interactive Demo</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+    @import url('https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css');
+
+    :root {
+      color-scheme: light;
+      --font-sans: "Manrope", "Segoe UI", sans-serif;
+      --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+      --bg: #f3efe7;
+      --bg-accent: radial-gradient(circle at top left, rgba(15, 118, 110, 0.16), transparent 34%), radial-gradient(circle at bottom right, rgba(217, 119, 6, 0.14), transparent 28%), linear-gradient(180deg, #fbf8f2 0%, #efe8db 100%);
+      --surface: rgba(255, 252, 247, 0.82);
+      --surface-strong: #fffdf8;
+      --surface-soft: #f6f0e4;
+      --page: #fffdf8;
+      --page-border: rgba(120, 102, 75, 0.2);
+      --text: #1c2526;
+      --muted: #5d6668;
+      --accent: #0f766e;
+      --accent-strong: #115e59;
+      --accent-soft: rgba(15, 118, 110, 0.12);
+      --warning: #b45309;
+      --warning-soft: rgba(245, 158, 11, 0.16);
+      --danger: #b42318;
+      --danger-soft: rgba(217, 45, 32, 0.12);
+      --success: #16794d;
+      --success-soft: rgba(22, 121, 77, 0.12);
+      --shadow-lg: 0 24px 60px rgba(42, 38, 30, 0.14);
+      --shadow-md: 0 14px 32px rgba(42, 38, 30, 0.11);
+      --shadow-sm: 0 8px 18px rgba(42, 38, 30, 0.08);
+      --radius-xl: 26px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #101718;
+      --bg-accent: radial-gradient(circle at top left, rgba(94, 234, 212, 0.1), transparent 32%), radial-gradient(circle at bottom right, rgba(251, 191, 36, 0.09), transparent 26%), linear-gradient(180deg, #0f1718 0%, #131d1f 100%);
+      --surface: rgba(18, 28, 30, 0.86);
+      --surface-strong: #172124;
+      --surface-soft: #1b282b;
+      --page: #1a2426;
+      --page-border: rgba(174, 203, 198, 0.12);
+      --text: #eff7f5;
+      --muted: #a7bab6;
+      --accent: #5eead4;
+      --accent-strong: #99f6e4;
+      --accent-soft: rgba(94, 234, 212, 0.16);
+      --warning: #fbbf24;
+      --warning-soft: rgba(251, 191, 36, 0.12);
+      --danger: #f97066;
+      --danger-soft: rgba(249, 112, 102, 0.16);
+      --success: #6ce9a6;
+      --success-soft: rgba(108, 233, 166, 0.14);
+      --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.34);
+      --shadow-md: 0 14px 32px rgba(0, 0, 0, 0.28);
+      --shadow-sm: 0 8px 18px rgba(0, 0, 0, 0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      color: var(--text);
+      background: var(--bg-accent), var(--bg);
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    :focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--accent) 78%, white 22%);
+      outline-offset: 3px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .app-shell {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      padding: 18px 22px 14px;
+      backdrop-filter: blur(18px);
+      background: color-mix(in srgb, var(--surface) 86%, transparent 14%);
+      border-bottom: 1px solid color-mix(in srgb, var(--page-border) 70%, transparent 30%);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .toolbar-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .brand {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .brand-badge {
+      width: 54px;
+      height: 54px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 84%, white 16%), color-mix(in srgb, var(--warning) 78%, white 22%));
+      color: #fefefe;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      box-shadow: var(--shadow-md);
+    }
+
+    .brand-copy {
+      min-width: 0;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: clamp(1.15rem, 2vw, 1.45rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-meta {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .meta-pill,
+    .page-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+    }
+
+    .toolbar-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .search-wrap {
+      min-width: min(100%, 340px);
+      max-width: 420px;
+      flex: 1 1 280px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--surface-soft);
+      border-radius: 16px;
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+    }
+
+    .search-wrap input {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      min-width: 0;
+    }
+
+    .search-wrap input::placeholder {
+      color: color-mix(in srgb, var(--muted) 72%, transparent 28%);
+    }
+
+    .button {
+      appearance: none;
+      border: 1px solid color-mix(in srgb, var(--page-border) 70%, transparent 30%);
+      background: var(--surface-strong);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 10px 14px;
+      line-height: 1;
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+      box-shadow: var(--shadow-sm);
+      font-weight: 600;
+    }
+
+    .button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent) 38%, var(--page-border) 62%);
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      box-shadow: none;
+    }
+
+    .button.primary {
+      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 82%, white 18%), color-mix(in srgb, var(--accent-strong) 92%, black 8%));
+      color: #f8fdfc;
+      border-color: transparent;
+    }
+
+    .button.ghost {
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .button.warn {
+      background: color-mix(in srgb, var(--warning-soft) 86%, var(--surface-strong) 14%);
+    }
+
+    .button.small {
+      min-height: 36px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      box-shadow: none;
+    }
+
+    .page-indicator {
+      min-width: 112px;
+      justify-content: center;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: var(--surface-soft);
+      border-radius: 14px;
+      padding: 10px 12px;
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .toolbar-subrow {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .workspace {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .workspace.is-editor {
+      grid-template-columns: minmax(320px, 420px) 1fr;
+    }
+
+    .editor-panel {
+      border-right: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      background: color-mix(in srgb, var(--surface) 90%, transparent 10%);
+      backdrop-filter: blur(14px);
+      padding: 20px;
+      overflow: auto;
+      display: none;
+      box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .workspace.is-editor .editor-panel {
+      display: block;
+    }
+
+    .editor-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 100%;
+    }
+
+    .editor-card,
+    .notice-banner {
+      background: color-mix(in srgb, var(--surface-strong) 88%, transparent 12%);
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .editor-card {
+      padding: 16px;
+    }
+
+    .editor-card h2,
+    .editor-card h3 {
+      margin: 0 0 10px;
+      font-size: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .editor-copy {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+      line-height: 1.5;
+    }
+
+    .editor-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .editor-textarea {
+      width: 100%;
+      min-height: 420px;
+      resize: vertical;
+      border: 1px solid color-mix(in srgb, var(--page-border) 70%, transparent 30%);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--surface-soft) 82%, transparent 18%);
+      color: var(--text);
+      padding: 16px;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+      font-family: var(--font-mono);
+      font-size: 0.89rem;
+      line-height: 1.55;
+      tab-size: 2;
+    }
+
+    .field-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .field-stack label {
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .inline-file {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .inline-file input[type="file"] {
+      max-width: 100%;
+    }
+
+    .viewer-pane {
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .notice-area {
+      padding: 18px 22px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .notice-banner {
+      padding: 13px 15px;
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    .notice-banner.info {
+      background: color-mix(in srgb, var(--accent-soft) 78%, var(--surface-strong) 22%);
+    }
+
+    .notice-banner.warning {
+      background: color-mix(in srgb, var(--warning-soft) 82%, var(--surface-strong) 18%);
+    }
+
+    .notice-banner.error {
+      background: color-mix(in srgb, var(--danger-soft) 82%, var(--surface-strong) 18%);
+    }
+
+    .notice-banner.success {
+      background: color-mix(in srgb, var(--success-soft) 82%, var(--surface-strong) 18%);
+    }
+
+    .document-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 18px 22px 34px;
+      scroll-behavior: smooth;
+    }
+
+    .page-stack {
+      width: min(100%, 930px);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .page-card {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--page) 96%, white 4%) 0%, var(--page) 100%);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--page-border);
+      box-shadow: var(--shadow-lg);
+      padding: clamp(22px, 3vw, 34px);
+      position: relative;
+      overflow: hidden;
+      min-height: 420px;
+    }
+
+    .page-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 8px;
+      background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 85%, white 15%), color-mix(in srgb, var(--warning) 82%, white 18%));
+      opacity: 0.95;
+    }
+
+    .page-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+      padding-top: 8px;
+      margin-bottom: 20px;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: clamp(1.1rem, 2vw, 1.4rem);
+      letter-spacing: -0.03em;
+    }
+
+    .page-label {
+      font-size: 0.88rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+
+    .page-body {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .doc-heading {
+      margin: 0;
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+    }
+
+    .doc-heading.level-1 {
+      font-size: clamp(1.8rem, 4vw, 2.7rem);
+    }
+
+    .doc-heading.level-2 {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+    }
+
+    .doc-heading.level-3,
+    .doc-heading.level-4,
+    .doc-heading.level-5,
+    .doc-heading.level-6 {
+      font-size: 1.15rem;
+    }
+
+    .doc-paragraph,
+    .doc-text,
+    .doc-quote-content,
+    .doc-callout-copy {
+      margin: 0;
+      color: color-mix(in srgb, var(--text) 94%, var(--muted) 6%);
+      line-height: 1.72;
+      white-space: pre-line;
+    }
+
+    .doc-text {
+      font-size: 0.97rem;
+      color: var(--muted);
+    }
+
+    .doc-separator {
+      border: 0;
+      border-top: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      margin: 10px 0 2px;
+    }
+
+    .doc-callout,
+    .doc-warning,
+    .question-card,
+    .doc-input-card,
+    .doc-math {
+      border-radius: var(--radius-lg);
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      padding: 16px 18px;
+      background: color-mix(in srgb, var(--surface-soft) 84%, transparent 16%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .doc-callout.info {
+      background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface-strong) 30%);
+    }
+
+    .doc-callout.warn {
+      background: color-mix(in srgb, var(--warning-soft) 74%, var(--surface-strong) 26%);
+    }
+
+    .doc-callout.success {
+      background: color-mix(in srgb, var(--success-soft) 70%, var(--surface-strong) 30%);
+    }
+
+    .doc-callout-title,
+    .doc-warning-title {
+      margin: 0 0 8px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .doc-warning {
+      background: color-mix(in srgb, var(--danger-soft) 68%, var(--surface-strong) 32%);
+    }
+
+    .doc-warning-copy {
+      margin: 0;
+      line-height: 1.6;
+      color: color-mix(in srgb, var(--text) 92%, var(--muted) 8%);
+    }
+
+    .doc-math {
+      overflow-x: auto;
+      font-size: 1.02rem;
+    }
+
+    .doc-code {
+      margin: 0;
+      padding: 16px;
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--surface-soft) 66%, black 4%);
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      line-height: 1.68;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-x: auto;
+    }
+
+    .doc-code-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: var(--surface-soft);
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+    }
+
+    .doc-quote {
+      margin: 0;
+      padding: 4px 0 4px 18px;
+      border-left: 4px solid color-mix(in srgb, var(--accent) 65%, transparent 35%);
+    }
+
+    .doc-quote cite {
+      display: block;
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-style: normal;
+    }
+
+    .doc-list {
+      margin: 0;
+      padding-left: 22px;
+      line-height: 1.7;
+    }
+
+    .doc-list li + li {
+      margin-top: 6px;
+    }
+
+    .doc-image {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .doc-image img {
+      width: 100%;
+      max-height: 320px;
+      object-fit: cover;
+      border-radius: var(--radius-lg);
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      box-shadow: var(--shadow-md);
+      background: color-mix(in srgb, var(--surface-soft) 85%, transparent 15%);
+    }
+
+    .doc-image figcaption {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+
+    .doc-button-row,
+    .question-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .doc-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      color: color-mix(in srgb, var(--accent) 88%, var(--text) 12%);
+      text-decoration: none;
+      text-underline-offset: 4px;
+    }
+
+    .doc-link:hover,
+    .doc-link:focus-visible {
+      text-decoration: underline;
+    }
+
+    .doc-spacer {
+      width: 100%;
+    }
+
+    .doc-input-card input,
+    .doc-input-card textarea {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      background: var(--surface-strong);
+      color: var(--text);
+    }
+
+    .doc-input-help {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .question-card {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .question-prompt {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .question-options {
+      display: grid;
+      gap: 10px;
+    }
+
+    .question-option {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      background: color-mix(in srgb, var(--surface-strong) 92%, transparent 8%);
+      cursor: pointer;
+    }
+
+    .question-option input {
+      margin-top: 4px;
+    }
+
+    .question-feedback {
+      padding: 13px 14px;
+      border-radius: 14px;
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+
+    .question-feedback.correct {
+      background: color-mix(in srgb, var(--success-soft) 82%, var(--surface-strong) 18%);
+    }
+
+    .question-feedback.incorrect {
+      background: color-mix(in srgb, var(--danger-soft) 82%, var(--surface-strong) 18%);
+    }
+
+    .question-feedback.reveal {
+      background: color-mix(in srgb, var(--accent-soft) 82%, var(--surface-strong) 18%);
+    }
+
+    mark {
+      background: color-mix(in srgb, var(--warning) 32%, white 68%);
+      color: inherit;
+      padding: 0 2px;
+      border-radius: 4px;
+    }
+
+    html[data-theme="dark"] mark {
+      background: color-mix(in srgb, var(--warning) 32%, black 68%);
+    }
+
+    .modal-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .modal-layer.is-open {
+      pointer-events: auto;
+    }
+
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(8, 12, 13, 0.5);
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    .modal-card {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: min(92vw, 560px);
+      transform: translate(-50%, -46%);
+      background: var(--surface-strong);
+      color: var(--text);
+      border-radius: 24px;
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      box-shadow: var(--shadow-lg);
+      padding: 22px;
+      opacity: 0;
+      transition: transform 220ms ease, opacity 220ms ease;
+    }
+
+    .modal-layer.is-open .modal-backdrop {
+      opacity: 1;
+    }
+
+    .modal-layer.is-open .modal-card {
+      opacity: 1;
+      transform: translate(-50%, -50%);
+    }
+
+    .modal-title {
+      margin: 0 0 10px;
+      font-size: 1.15rem;
+      letter-spacing: -0.03em;
+    }
+
+    .modal-copy {
+      margin: 0 0 18px;
+      line-height: 1.65;
+      color: color-mix(in srgb, var(--text) 94%, var(--muted) 6%);
+      white-space: pre-line;
+    }
+
+    .modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .empty-state {
+      padding: 26px;
+      border-radius: 20px;
+      background: color-mix(in srgb, var(--surface-soft) 78%, transparent 22%);
+      border: 1px dashed color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 980px) {
+      .toolbar {
+        padding: 16px 16px 12px;
+      }
+
+      .toolbar-main {
+        grid-template-columns: 1fr;
+      }
+
+      .control-row {
+        justify-content: flex-start;
+      }
+
+      .workspace.is-editor {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(280px, auto) 1fr;
+      }
+
+      .editor-panel {
+        border-right: 0;
+        border-bottom: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      }
+
+      .document-scroll {
+        padding: 16px 16px 28px;
+      }
+
+      .notice-area {
+        padding: 16px 16px 0;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .brand {
+        align-items: center;
+      }
+
+      .brand-badge {
+        width: 46px;
+        height: 46px;
+      }
+
+      .page-card {
+        min-height: auto;
+        padding: 20px;
+      }
+
+      .search-wrap {
+        min-width: 100%;
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">Loading iDoc...</div>
+  <script type="application/json" id="idoc-data">
+{
+  "meta": {
+    "title": "iDoc Interactive Demo",
+    "author": "Prototype Office",
+    "version": "1.0",
+    "theme": "light",
+    "recommendedFilename": "example.idoc.html"
+  },
+  "state": {
+    "currentPage": 0
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "title": "Welcome",
+      "elements": [
+        {
+          "type": "heading",
+          "level": 1,
+          "text": "Welcome to iDoc"
+        },
+        {
+          "type": "paragraph",
+          "text": "iDoc is a browser-based prototype for interactive documents. This single file contains the engine, the document data, and the editing tools in one place. Use search to find words like prototype, state, export, or theme across the pages."
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "title": "What makes this different",
+          "text": "The file is transparent and self-contained. It behaves like a polished reader, but the content is custom JSON that can trigger navigation, popups, and question feedback."
+        },
+        {
+          "type": "math",
+          "tex": "\\\\int_0^1 x^2 \\\\, dx = \\\\frac{1}{3}",
+          "displayMode": true
+        },
+        {
+          "type": "button",
+          "label": "Open overview popup",
+          "variant": "primary",
+          "action": "open-intro-popup"
+        },
+        {
+          "type": "image",
+          "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 380'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='%230f766e'/><stop offset='100%' stop-color='%23d97706'/></linearGradient></defs><rect width='720' height='380' rx='32' fill='%23f6f0e4'/><rect x='34' y='34' width='652' height='312' rx='24' fill='url(%23g)' opacity='0.16'/><circle cx='172' cy='168' r='92' fill='%230f766e' opacity='0.72'/><path d='M278 118h270a26 26 0 0 1 26 26v96a26 26 0 0 1-26 26H278z' fill='%23fffdf8'/><rect x='306' y='148' width='192' height='18' rx='9' fill='%230f766e' opacity='0.75'/><rect x='306' y='184' width='164' height='14' rx='7' fill='%23d97706' opacity='0.5'/><rect x='306' y='214' width='208' height='14' rx='7' fill='%230f766e' opacity='0.24'/><text x='164' y='176' text-anchor='middle' font-family='Georgia' font-size='42' fill='%23fffdf8'>iDoc</text></svg>",
+          "alt": "Abstract embedded illustration for the iDoc demo",
+          "caption": "An inline SVG image is stored inside the document JSON, so the viewer stays self-contained."
+        },
+        {
+          "type": "text",
+          "text": "Recommended save name for the standalone file: example.idoc.html"
+        }
+      ]
+    },
+    {
+      "id": "page-2",
+      "title": "Controls and Code",
+      "elements": [
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Controls, navigation, and simple state"
+        },
+        {
+          "type": "paragraph",
+          "text": "This page demonstrates code rendering, a quote block, a list, a text input, and action buttons for navigation and theme changes. The document keeps lightweight reader state locally in the browser."
+        },
+        {
+          "type": "code",
+          "language": "js",
+          "code": "function searchDocument(query) {\\n  return pages.filter((page) => page.elements.some(matchesQuery));\\n}\\n\\nfunction goToPage(index) {\\n  state.currentPage = index;\\n}"
+        },
+        {
+          "type": "quote",
+          "text": "A useful document engine should be readable as content and inspectable as software.",
+          "cite": "iDoc prototype note"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "Previous and next page controls live in the toolbar.",
+            "Theme switching updates the viewer immediately.",
+            "Search highlights matching text without trusting raw HTML."
+          ]
+        },
+        {
+          "type": "input",
+          "id": "reader-note",
+          "label": "Reader note",
+          "placeholder": "Type a short note that stays in memory while this file is open.",
+          "helpText": "This demo input stores simple state in the runtime store."
+        },
+        {
+          "type": "button",
+          "label": "Go to page 3",
+          "action": "goto-questions"
+        },
+        {
+          "type": "button",
+          "label": "Toggle theme",
+          "action": "toggle-theme"
+        },
+        {
+          "type": "button",
+          "label": "Show safe alert",
+          "action": "show-alert"
+        },
+        {
+          "type": "link",
+          "label": "Open MDN in a new tab",
+          "action": "open-mdn"
+        }
+      ]
+    },
+    {
+      "id": "page-3",
+      "title": "Questions and Export",
+      "elements": [
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Quiz, reveal, and export"
+        },
+        {
+          "type": "paragraph",
+          "text": "The final page tests question evaluation, answer reveal, and JSON export. Search terms like export and state should also match here."
+        },
+        {
+          "type": "question",
+          "id": "question-engine",
+          "questionType": "mcq",
+          "prompt": "Which part of the file contains the embedded document data?",
+          "options": [
+            "A hidden backend service stores it remotely.",
+            "A <script type=\"application/json\" id=\"idoc-data\"> block stores it in the file.",
+            "The data only exists in browser memory after loading."
+          ],
+          "answer": 1,
+          "explanation": "The runtime reads the JSON from the application/json script block, validates it, and renders it as pages."
+        },
+        {
+          "type": "button",
+          "label": "Reveal answer",
+          "action": "show-q1-answer"
+        },
+        {
+          "type": "button",
+          "label": "Save draft to browser",
+          "action": "save-doc"
+        },
+        {
+          "type": "button",
+          "label": "Export current JSON",
+          "variant": "primary",
+          "action": "export-json"
+        },
+        {
+          "type": "callout",
+          "tone": "success",
+          "title": "Editing mode",
+          "text": "Switch to edit mode from the toolbar to modify the JSON, validate it safely, preview changes live, import another document, or reset back to this embedded demo."
+        },
+        {
+          "type": "spacer",
+          "size": 8
+        },
+        {
+          "type": "text",
+          "text": "This prototype remains a single self-contained HTML file even when you save a local draft."
+        }
+      ]
+    }
+  ],
+  "actions": {
+    "open-intro-popup": {
+      "type": "popup",
+      "title": "About this demo",
+      "content": "This popup is defined in the document JSON action map. The same file contains both the viewer runtime and the document content."
+    },
+    "goto-questions": {
+      "type": "gotoPage",
+      "page": 2
+    },
+    "toggle-theme": {
+      "type": "toggleTheme"
+    },
+    "show-alert": {
+      "type": "alert",
+      "title": "Explicit action",
+      "content": "Action handlers are document-driven and safely constrained to known behaviors."
+    },
+    "open-mdn": {
+      "type": "openLink",
+      "url": "https://developer.mozilla.org/"
+    },
+    "show-q1-answer": {
+      "type": "showAnswer",
+      "target": "question-engine"
+    },
+    "save-doc": {
+      "type": "saveDocument"
+    },
+    "export-json": {
+      "type": "exportDocument"
+    }
+  }
+}
+  </script>
+  <script>
+    (function () {
+      "use strict";
+      var DRAFT_KEY = "idoc.draft.v1";
+      var PREFS_KEY = "idoc.prefs.v1";
+      var KATEX_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js";
+      var KATEX_AUTORENDER_URL = "https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js";
+      var SEARCHABLE_TYPES = new Set(["heading", "paragraph", "text", "callout", "code"]);
+      var SUPPORTED_ELEMENT_TYPES = new Set([
+        "heading",
+        "paragraph",
+        "text",
+        "math",
+        "image",
+        "button",
+        "link",
+        "separator",
+        "callout",
+        "code",
+        "spacer",
+        "quote",
+        "list",
+        "question",
+        "input",
+        "pagebreak",
+        "rawhtml"
+      ]);
+
+      var embeddedText = "";
+      var app = document.getElementById("app");
+      var refs = {};
+      var noticeTimer = 0;
+      var autosaveTimer = 0;
+      var state = {
+        currentPage: 0,
+        theme: "light",
+        activeModal: null,
+        userAnswers: {},
+        questionResults: {},
+        revealedAnswers: {},
+        searchQuery: "",
+        searchResults: [],
+        editorMode: false,
+        draftJSONText: "",
+        activeDocument: null,
+        validationError: "",
+        validationWarnings: [],
+        localInputs: {},
+        notice: null,
+        katexReady: false,
+        katexLoadAttempted: false
+      };
+
+      init();
+
+      function init() {
+        ensureLayout();
+        embeddedText = loadEmbeddedDocument();
+        var storedDraft = loadDraftText();
+        var startingDraftText = storedDraft || embeddedText;
+        state.draftJSONText = startingDraftText;
+
+        var embeddedResult = tryParseAndValidate(embeddedText, "embedded document");
+        var activeResult = embeddedResult;
+
+        if (storedDraft) {
+          var storedResult = tryParseAndValidate(storedDraft, "saved draft");
+          if (storedResult.ok) {
+            activeResult = storedResult;
+            setNotice("Restored a saved local draft.", "success");
+          } else {
+            state.validationError = storedResult.errorMessage;
+            setNotice("Saved draft JSON is invalid. The embedded demo was loaded instead.", "warning");
+          }
+        }
+
+        if (!activeResult.ok) {
+          var emergencyResult = validateDocument(buildEmergencyDocument(activeResult.errorMessage || "Unable to load the embedded document."));
+          state.activeDocument = emergencyResult.document;
+          state.validationWarnings = emergencyResult.warnings;
+          state.draftJSONText = embeddedText || JSON.stringify(emergencyResult.document, null, 2);
+          state.validationError = activeResult.errorMessage || "Startup document could not be parsed.";
+          setNotice("The embedded document could not be read. An emergency fallback document is shown instead.", "error");
+        } else {
+          state.activeDocument = activeResult.document;
+          state.validationWarnings = activeResult.warnings;
+        }
+
+        var initialPage = getInitialCurrentPage();
+        state.currentPage = clamp(initialPage, 0, getPageCount() - 1);
+        setTheme(loadPrefs().theme || getDocumentTheme(), false);
+
+        bindGlobalListeners();
+        renderApp();
+        goToPage(state.currentPage, false);
+        loadKatexAssets();
+      }
+
+      function ensureLayout() {
+        if (refs.appShell) {
+          return;
+        }
+
+        app.innerHTML = "";
+        var shell = createElement("div", "app-shell");
+        var toolbar = createElement("header", "toolbar");
+        toolbar.id = "toolbar";
+
+        var workspace = createElement("div", "workspace");
+        workspace.id = "workspace";
+
+        var editorPanel = createElement("aside", "editor-panel");
+        editorPanel.id = "editor-panel";
+
+        var viewerPane = createElement("section", "viewer-pane");
+        viewerPane.id = "viewer-pane";
+
+        var noticeArea = createElement("div", "notice-area");
+        noticeArea.id = "notice-area";
+
+        var documentScroll = createElement("div", "document-scroll");
+        documentScroll.id = "document-scroll";
+        documentScroll.tabIndex = -1;
+
+        var pageStack = createElement("div", "page-stack");
+        pageStack.id = "page-stack";
+
+        var modalLayer = createElement("div", "modal-layer");
+        modalLayer.id = "modal-layer";
+        modalLayer.setAttribute("aria-hidden", "true");
+
+        var toolbarImport = document.createElement("input");
+        toolbarImport.type = "file";
+        toolbarImport.accept = ".json,application/json";
+        toolbarImport.id = "toolbar-import";
+        toolbarImport.className = "sr-only";
+
+        documentScroll.appendChild(pageStack);
+        viewerPane.appendChild(noticeArea);
+        viewerPane.appendChild(documentScroll);
+        workspace.appendChild(editorPanel);
+        workspace.appendChild(viewerPane);
+        shell.appendChild(toolbar);
+        shell.appendChild(workspace);
+        shell.appendChild(modalLayer);
+        shell.appendChild(toolbarImport);
+        app.appendChild(shell);
+
+        refs.appShell = shell;
+        refs.toolbar = toolbar;
+        refs.workspace = workspace;
+        refs.editorPanel = editorPanel;
+        refs.viewerPane = viewerPane;
+        refs.noticeArea = noticeArea;
+        refs.documentScroll = documentScroll;
+        refs.pageStack = pageStack;
+        refs.modalLayer = modalLayer;
+        refs.toolbarImport = toolbarImport;
+      }
+
+      function bindGlobalListeners() {
+        refs.documentScroll.addEventListener("scroll", onDocumentScroll, { passive: true });
+        refs.toolbarImport.addEventListener("change", function (event) {
+          importJSON(event.target.files && event.target.files[0]);
+          event.target.value = "";
+        });
+
+        document.addEventListener("keydown", function (event) {
+          if (state.activeModal && event.key === "Escape") {
+            event.preventDefault();
+            hideModal();
+            return;
+          }
+
+          var target = event.target;
+          var isTypingTarget = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+          if (isTypingTarget && event.key !== "Escape") {
+            return;
+          }
+
+          if (event.key === "ArrowRight" || event.key === "PageDown") {
+            event.preventDefault();
+            goToPage(state.currentPage + 1, true);
+          }
+
+          if (event.key === "ArrowLeft" || event.key === "PageUp") {
+            event.preventDefault();
+            goToPage(state.currentPage - 1, true);
+          }
+
+          if (event.key === "/") {
+            event.preventDefault();
+            var searchInput = document.getElementById("toolbar-search");
+            if (searchInput) {
+              searchInput.focus();
+              searchInput.select();
+            }
+          }
+        });
+      }
+
+      function loadEmbeddedDocument() {
+        var node = document.getElementById("idoc-data");
+        return node ? node.textContent.trim() : "";
+      }
+
+      function parseDocumentData(sourceText) {
+        if (typeof sourceText !== "string" || !sourceText.trim()) {
+          throw new Error("Document JSON is empty.");
+        }
+        return JSON.parse(sourceText);
+      }
+
+      function validateDocument(sourceDoc) {
+        var warnings = [];
+        var doc = isPlainObject(sourceDoc) ? sourceDoc : {};
+        var meta = isPlainObject(doc.meta) ? doc.meta : {};
+        var stateData = isPlainObject(doc.state) ? doc.state : {};
+        var rawPages = Array.isArray(doc.pages) ? doc.pages : [];
+        var rawActions = isPlainObject(doc.actions) ? doc.actions : {};
+
+        if (!Array.isArray(doc.pages)) {
+          warnings.push("Document pages were missing or malformed. A placeholder page was created.");
+        }
+
+        var normalizedPages = rawPages.map(function (page, pageIndex) {
+          var pageObject = isPlainObject(page) ? page : {};
+          if (!isPlainObject(page)) {
+            warnings.push("Page " + (pageIndex + 1) + " was malformed and has been normalized.");
+          }
+
+          var elements = Array.isArray(pageObject.elements) ? pageObject.elements : [];
+          if (!Array.isArray(pageObject.elements)) {
+            warnings.push("Page " + (pageIndex + 1) + " did not contain a valid elements array.");
+          }
+
+          return {
+            id: normalizeString(pageObject.id) || "page-" + (pageIndex + 1),
+            title: normalizeString(pageObject.title) || "Page " + (pageIndex + 1),
+            elements: elements.map(function (element, elementIndex) {
+              if (!isPlainObject(element)) {
+                warnings.push("Element " + (elementIndex + 1) + " on page " + (pageIndex + 1) + " was malformed.");
+                return {
+                  id: "page-" + (pageIndex + 1) + "-element-" + (elementIndex + 1),
+                  type: "text",
+                  text: "Malformed element could not be rendered."
+                };
+              }
+
+              var type = normalizeString(element.type).toLowerCase() || "text";
+              if (!SUPPORTED_ELEMENT_TYPES.has(type)) {
+                warnings.push("Unsupported element type '" + type + "' was found on page " + (pageIndex + 1) + ".");
+              }
+
+              return Object.assign({}, element, {
+                id: normalizeString(element.id) || "page-" + (pageIndex + 1) + "-element-" + (elementIndex + 1),
+                type: type
+              });
+            })
+          };
+        });
+
+        if (!normalizedPages.length) {
+          normalizedPages.push({
+            id: "page-1",
+            title: "Untitled Page",
+            elements: [
+              {
+                id: "placeholder-1",
+                type: "paragraph",
+                text: "This document did not contain any valid pages."
+              }
+            ]
+          });
+        }
+
+        return {
+          document: {
+            meta: {
+              title: normalizeString(meta.title) || "Untitled iDoc",
+              author: normalizeString(meta.author) || "Unknown author",
+              version: normalizeString(meta.version) || "1.0",
+              theme: normalizeTheme(meta.theme || "light"),
+              recommendedFilename: normalizeString(meta.recommendedFilename) || "example.idoc.html"
+            },
+            state: {
+              currentPage: isFiniteNumber(stateData.currentPage) ? Number(stateData.currentPage) : 0
+            },
+            pages: normalizedPages,
+            actions: rawActions
+          },
+          warnings: warnings
+        };
+      }
+
+      function renderApp() {
+        var focusState = captureFocusState();
+        var previousScrollTop = refs.documentScroll ? refs.documentScroll.scrollTop : 0;
+        refs.workspace.classList.toggle("is-editor", Boolean(state.editorMode));
+        renderToolbar();
+        renderNoticeArea();
+        renderDocument(previousScrollTop);
+        renderEditor();
+        renderModal();
+        restoreFocusState(focusState);
+      }
+
+      function renderToolbar() {
+        var toolbar = refs.toolbar;
+        toolbar.innerHTML = "";
+
+        var doc = getActiveDocument();
+        var pageCount = getPageCount();
+
+        var main = createElement("div", "toolbar-main");
+        var brand = createElement("div", "brand");
+        var badge = createElement("div", "brand-badge", "ID");
+        var brandCopy = createElement("div", "brand-copy");
+        var title = createElement("h1", "brand-title", doc.meta.title);
+        var meta = createElement("div", "brand-meta");
+        meta.appendChild(createPill("Author: " + doc.meta.author));
+        meta.appendChild(createPill("Version " + doc.meta.version));
+        meta.appendChild(createPill("Recommended filename: " + doc.meta.recommendedFilename));
+        brandCopy.appendChild(title);
+        brandCopy.appendChild(meta);
+        brand.appendChild(badge);
+        brand.appendChild(brandCopy);
+
+        var controls = createElement("div", "toolbar-controls");
+        var row1 = createElement("div", "control-row");
+        var prevButton = createButton("Prev", "button small", function () {
+          goToPage(state.currentPage - 1, true);
+        });
+        prevButton.disabled = state.currentPage <= 0;
+        var pageIndicator = createElement("div", "page-indicator", "Page " + (state.currentPage + 1) + " / " + pageCount);
+        var nextButton = createButton("Next", "button small", function () {
+          goToPage(state.currentPage + 1, true);
+        });
+        nextButton.disabled = state.currentPage >= pageCount - 1;
+        row1.appendChild(prevButton);
+        row1.appendChild(pageIndicator);
+        row1.appendChild(nextButton);
+
+        var row2 = createElement("div", "control-row");
+        var focusSearchButton = createButton("Find", "button small ghost", function () {
+          var searchInput = document.getElementById("toolbar-search");
+          if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+          }
+        });
+        var searchWrap = createElement("label", "search-wrap");
+        searchWrap.setAttribute("for", "toolbar-search");
+        var searchLabel = createElement("span", "sr-only", "Search the document");
+        var searchInput = document.createElement("input");
+        searchInput.id = "toolbar-search";
+        searchInput.type = "search";
+        searchInput.placeholder = "Search pages and highlight matches";
+        searchInput.value = state.searchQuery;
+        searchInput.addEventListener("input", function (event) {
+          searchDocument(event.target.value);
+        });
+        searchInput.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" && state.searchResults.length) {
+            event.preventDefault();
+            goToPage(state.searchResults[0].pageIndex, true);
+          }
+        });
+        searchWrap.appendChild(searchLabel);
+        searchWrap.appendChild(searchInput);
+
+        var themeButton = createButton(state.theme === "dark" ? "Light theme" : "Dark theme", "button small", function () {
+          setTheme(state.theme === "dark" ? "light" : "dark", true);
+          renderApp();
+        });
+        var modeButton = createButton(state.editorMode ? "View mode" : "Edit mode", "button small", function () {
+          if (state.editorMode) {
+            exitEditMode();
+          } else {
+            enterEditMode();
+          }
+        });
+        var saveButton = createButton("Save draft", "button small", function () {
+          saveDraft();
+        });
+        var exportButton = createButton("Export JSON", "button small primary", function () {
+          exportJSON();
+        });
+        var importButton = createButton("Import JSON", "button small", function () {
+          refs.toolbarImport.click();
+        });
+        var resetButton = createButton("Reset demo", "button small warn", function () {
+          resetToDemo();
+        });
+
+        row2.appendChild(focusSearchButton);
+        row2.appendChild(searchWrap);
+        row2.appendChild(themeButton);
+        row2.appendChild(modeButton);
+        row2.appendChild(saveButton);
+        row2.appendChild(exportButton);
+        row2.appendChild(importButton);
+        row2.appendChild(resetButton);
+
+        controls.appendChild(row1);
+        controls.appendChild(row2);
+        main.appendChild(brand);
+        main.appendChild(controls);
+        toolbar.appendChild(main);
+
+        var subrow = createElement("div", "toolbar-subrow");
+        if (!state.searchQuery.trim()) {
+          subrow.appendChild(createElement("span", "", "Search is ready. Press / to focus the search field."));
+        } else if (!state.searchResults.length) {
+          subrow.appendChild(createElement("span", "", "No matches found for \"" + state.searchQuery + "\"."));
+        } else {
+          subrow.appendChild(createElement("span", "", state.searchResults.length + " matching page" + (state.searchResults.length === 1 ? "" : "s") + " for \"" + state.searchQuery + "\":"));
+          state.searchResults.forEach(function (result) {
+            var chip = createButton("Page " + (result.pageIndex + 1), "page-chip", function () {
+              goToPage(result.pageIndex, true);
+            });
+            subrow.appendChild(chip);
+          });
+        }
+        toolbar.appendChild(subrow);
+      }
+
+      function renderNoticeArea() {
+        refs.noticeArea.innerHTML = "";
+
+        if (state.notice) {
+          refs.noticeArea.appendChild(renderNotice(state.notice.message, state.notice.tone));
+        }
+
+        if (state.validationWarnings.length) {
+          refs.noticeArea.appendChild(renderNotice("Validation warning" + (state.validationWarnings.length > 1 ? "s" : "") + ": " + state.validationWarnings.join(" "), "warning"));
+        }
+      }
+
+      function renderDocument(previousScrollTop) {
+        var pageStack = refs.pageStack;
+        pageStack.innerHTML = "";
+        refs.pageMap = new Map();
+
+        var doc = getActiveDocument();
+        if (!doc.pages.length) {
+          pageStack.appendChild(createElement("div", "empty-state", "No pages are available in this document."));
+          return;
+        }
+
+        var fragment = document.createDocumentFragment();
+        doc.pages.forEach(function (page, pageIndex) {
+          var pageNode = renderPage(page, pageIndex);
+          refs.pageMap.set(pageIndex, pageNode);
+          fragment.appendChild(pageNode);
+        });
+        pageStack.appendChild(fragment);
+
+        if (typeof previousScrollTop === "number") {
+          refs.documentScroll.scrollTop = previousScrollTop;
+        }
+
+        requestAnimationFrame(function () {
+          renderMathBlocks();
+          updateCurrentPageFromScroll();
+        });
+      }
+
+      function renderPage(page, pageIndex) {
+        var pageCard = createElement("article", "page-card");
+        pageCard.id = "doc-page-" + pageIndex;
+        pageCard.dataset.pageIndex = String(pageIndex);
+        pageCard.setAttribute("aria-label", "Page " + (pageIndex + 1) + ": " + page.title);
+
+        var header = createElement("div", "page-header");
+        var pageTitle = createElement("h2", "page-title", page.title);
+        var pageLabel = createElement("div", "page-label", "Page " + (pageIndex + 1));
+        header.appendChild(pageTitle);
+        header.appendChild(pageLabel);
+
+        var body = createElement("div", "page-body");
+        page.elements.forEach(function (element) {
+          body.appendChild(renderElement(element, pageIndex));
+        });
+
+        pageCard.appendChild(header);
+        pageCard.appendChild(body);
+        return pageCard;
+      }
+
+      function renderElement(element, pageIndex) {
+        var type = normalizeString(element.type).toLowerCase();
+
+        if (!SUPPORTED_ELEMENT_TYPES.has(type)) {
+          return renderWarningBlock("Unknown element type", "The element type '" + type + "' is not supported and was skipped.");
+        }
+
+        if (type === "heading") {
+          var level = clamp(parseInt(element.level, 10) || 1, 1, 6);
+          var heading = document.createElement("h" + level);
+          heading.className = "doc-heading level-" + level;
+          setHighlightedText(heading, normalizeString(element.text));
+          return heading;
+        }
+
+        if (type === "paragraph") {
+          var paragraph = createElement("p", "doc-paragraph");
+          setHighlightedText(paragraph, normalizeString(element.text));
+          return paragraph;
+        }
+
+        if (type === "text") {
+          var text = createElement("div", "doc-text");
+          setHighlightedText(text, normalizeString(element.text));
+          return text;
+        }
+
+        if (type === "math") {
+          var mathNode = createElement("div", "doc-math");
+          mathNode.dataset.math = normalizeString(element.tex);
+          mathNode.dataset.displayMode = element.displayMode ? "true" : "false";
+          mathNode.textContent = toMathFallback(element.tex);
+          return mathNode;
+        }
+
+        if (type === "image") {
+          var src = sanitizeImageSrc(normalizeString(element.src));
+          if (!src) {
+            return renderWarningBlock("Image blocked", "The image source was missing or unsafe, so the image was not rendered.");
+          }
+          var figure = createElement("figure", "doc-image");
+          var image = document.createElement("img");
+          image.src = src;
+          image.alt = normalizeString(element.alt) || "Document image";
+          figure.appendChild(image);
+          if (normalizeString(element.caption)) {
+            figure.appendChild(createElement("figcaption", "", normalizeString(element.caption)));
+          }
+          return figure;
+        }
+
+        if (type === "button") {
+          var buttonRow = createElement("div", "doc-button-row");
+          var variantClass = normalizeString(element.variant) === "primary" ? " primary" : "";
+          var button = createButton(normalizeString(element.label) || "Run action", "button" + variantClass, function () {
+            executeAction(element.action, { element: element, pageIndex: pageIndex });
+          });
+          buttonRow.appendChild(button);
+          return buttonRow;
+        }
+
+        if (type === "link") {
+          var link = document.createElement("a");
+          link.className = "doc-link";
+          link.href = "#";
+          link.textContent = normalizeString(element.label) || normalizeString(element.href) || "Open link";
+          link.addEventListener("click", function (event) {
+            event.preventDefault();
+            if (element.action) {
+              executeAction(element.action, { element: element, pageIndex: pageIndex });
+            } else if (element.href) {
+              executeAction({ type: "openLink", url: element.href }, { element: element, pageIndex: pageIndex });
+            }
+          });
+          return link;
+        }
+
+        if (type === "separator") {
+          return createElement("hr", "doc-separator");
+        }
+
+        if (type === "callout") {
+          var tone = normalizeCalloutTone(element.tone);
+          var callout = createElement("aside", "doc-callout " + tone);
+          if (normalizeString(element.title)) {
+            var calloutTitle = createElement("h3", "doc-callout-title");
+            setHighlightedText(calloutTitle, normalizeString(element.title));
+            callout.appendChild(calloutTitle);
+          }
+          var calloutCopy = createElement("p", "doc-callout-copy");
+          setHighlightedText(calloutCopy, normalizeString(element.text));
+          callout.appendChild(calloutCopy);
+          return callout;
+        }
+
+        if (type === "code") {
+          var wrapper = createElement("div", "");
+          if (normalizeString(element.language)) {
+            wrapper.appendChild(createElement("div", "doc-code-label", normalizeString(element.language)));
+          }
+          var pre = createElement("pre", "doc-code");
+          setHighlightedText(pre, normalizeString(element.code));
+          wrapper.appendChild(pre);
+          return wrapper;
+        }
+
+        if (type === "spacer") {
+          var spacer = createElement("div", "doc-spacer");
+          spacer.style.height = clamp(parseInt(element.size, 10) || 16, 4, 120) + "px";
+          return spacer;
+        }
+
+        if (type === "quote") {
+          var quote = createElement("blockquote", "doc-quote");
+          var quoteContent = createElement("p", "doc-quote-content");
+          quoteContent.textContent = normalizeString(element.text);
+          quote.appendChild(quoteContent);
+          if (normalizeString(element.cite)) {
+            var cite = document.createElement("cite");
+            cite.textContent = normalizeString(element.cite);
+            quote.appendChild(cite);
+          }
+          return quote;
+        }
+
+        if (type === "list") {
+          var list = document.createElement(element.ordered ? "ol" : "ul");
+          list.className = "doc-list";
+          var items = Array.isArray(element.items) ? element.items : [];
+          if (!items.length) {
+            items = ["This list was empty."];
+          }
+          items.forEach(function (item) {
+            var li = document.createElement("li");
+            li.textContent = normalizeString(item);
+            list.appendChild(li);
+          });
+          return list;
+        }
+
+        if (type === "question") {
+          return renderQuestion(element);
+        }
+
+        if (type === "input") {
+          return renderInputElement(element);
+        }
+
+        if (type === "pagebreak") {
+          return renderWarningBlock("Pagebreak ignored", "Page boundaries are already controlled by the pages array. Add a new page object instead of relying on a pagebreak element.");
+        }
+
+        if (type === "rawhtml") {
+          return renderWarningBlock("Raw HTML disabled", "The rawhtml element type is intentionally blocked in this prototype for safety.");
+        }
+
+        return renderWarningBlock("Unsupported element", "This element could not be rendered.");
+      }
+
+      function renderQuestion(element) {
+        var card = createElement("section", "question-card");
+        var prompt = createElement("p", "question-prompt", normalizeString(element.prompt) || "Untitled question");
+        card.appendChild(prompt);
+
+        var questionId = normalizeString(element.id) || "question";
+        var options = Array.isArray(element.options) ? element.options : [];
+        var optionsWrap = createElement("div", "question-options");
+        options.forEach(function (optionText, optionIndex) {
+          var label = createElement("label", "question-option");
+          var radio = document.createElement("input");
+          radio.type = "radio";
+          radio.name = "question-" + questionId;
+          radio.value = String(optionIndex);
+          radio.checked = String(state.userAnswers[questionId]) === String(optionIndex);
+          radio.addEventListener("change", function () {
+            state.userAnswers[questionId] = optionIndex;
+            delete state.questionResults[questionId];
+            renderApp();
+          });
+          var copy = createElement("span", "", normalizeString(optionText));
+          label.appendChild(radio);
+          label.appendChild(copy);
+          optionsWrap.appendChild(label);
+        });
+        card.appendChild(optionsWrap);
+
+        var actions = createElement("div", "question-actions");
+        actions.appendChild(createButton("Check answer", "button small", function () {
+          executeAction({ type: "evaluateQuestion", target: questionId });
+        }));
+        actions.appendChild(createButton("Show answer", "button small ghost", function () {
+          executeAction({ type: "showAnswer", target: questionId });
+        }));
+        card.appendChild(actions);
+
+        var feedback = renderQuestionFeedback(element);
+        if (feedback) {
+          card.appendChild(feedback);
+        }
+
+        return card;
+      }
+
+      function renderQuestionFeedback(element) {
+        var questionId = normalizeString(element.id);
+        var answerIndex = isFiniteNumber(element.answer) ? Number(element.answer) : null;
+        if (!questionId) {
+          return null;
+        }
+
+        var result = state.questionResults[questionId];
+        var revealed = Boolean(state.revealedAnswers[questionId]);
+
+        if (result) {
+          var resultBox = createElement("div", "question-feedback " + (result.isCorrect ? "correct" : "incorrect"));
+          resultBox.textContent = result.isCorrect
+            ? "Correct. " + (normalizeString(element.explanation) || "Your selected answer matches the configured answer.")
+            : "Not yet. " + (normalizeString(element.explanation) || "Try again or reveal the configured answer.");
+          return resultBox;
+        }
+
+        if (revealed) {
+          var revealBox = createElement("div", "question-feedback reveal");
+          var answerText = answerIndex !== null && Array.isArray(element.options) && element.options[answerIndex] !== undefined
+            ? normalizeString(element.options[answerIndex])
+            : "No answer was configured.";
+          revealBox.textContent = "Configured answer: " + answerText + (normalizeString(element.explanation) ? " " + normalizeString(element.explanation) : "");
+          return revealBox;
+        }
+
+        return null;
+      }
+
+      function renderInputElement(element) {
+        var card = createElement("section", "doc-input-card");
+        var label = document.createElement("label");
+        label.textContent = normalizeString(element.label) || "Input";
+        var inputId = normalizeString(element.id) || "input-" + Math.random().toString(16).slice(2);
+        label.setAttribute("for", inputId);
+        card.appendChild(label);
+
+        var multiline = Boolean(element.multiline);
+        var input = document.createElement(multiline ? "textarea" : "input");
+        if (!multiline) {
+          input.type = "text";
+        }
+        input.id = inputId;
+        input.value = normalizeString(state.localInputs[inputId] != null ? state.localInputs[inputId] : element.value);
+        input.placeholder = normalizeString(element.placeholder);
+        input.addEventListener("input", function (event) {
+          state.localInputs[inputId] = event.target.value;
+        });
+        card.appendChild(input);
+
+        if (normalizeString(element.helpText)) {
+          card.appendChild(createElement("p", "doc-input-help", normalizeString(element.helpText)));
+        }
+
+        return card;
+      }
+
+      function executeAction(actionRef) {
+        var action = resolveAction(actionRef);
+        if (!action) {
+          setNotice("Action could not be resolved.", "warning");
+          renderNoticeArea();
+          return;
+        }
+
+        var type = normalizeString(action.type);
+        if (!type) {
+          setNotice("An action was missing its type and was ignored.", "warning");
+          renderNoticeArea();
+          return;
+        }
+
+        if (type === "popup") {
+          showModal({
+            title: normalizeString(action.title) || "Popup",
+            content: normalizeString(action.content) || "No popup content was provided."
+          });
+          return;
+        }
+
+        if (type === "gotoPage") {
+          goToPage(parseInt(action.page, 10), true);
+          return;
+        }
+
+        if (type === "openLink") {
+          var url = sanitizeLinkUrl(normalizeString(action.url));
+          if (!url) {
+            setNotice("The requested link was missing or unsafe and was blocked.", "warning");
+            renderNoticeArea();
+            return;
+          }
+          window.open(url, "_blank", "noopener,noreferrer");
+          return;
+        }
+
+        if (type === "toggleTheme") {
+          setTheme(state.theme === "dark" ? "light" : "dark", true);
+          renderApp();
+          return;
+        }
+
+        if (type === "alert") {
+          showModal({
+            title: normalizeString(action.title) || "Alert",
+            content: normalizeString(action.content) || "No alert message was provided."
+          });
+          return;
+        }
+
+        if (type === "closePopup") {
+          hideModal();
+          return;
+        }
+
+        if (type === "setState") {
+          setValueByPath(state, normalizeString(action.path), action.value);
+          persistPrefs();
+          renderApp();
+          return;
+        }
+
+        if (type === "evaluateQuestion") {
+          evaluateQuestion(normalizeString(action.target));
+          return;
+        }
+
+        if (type === "showAnswer") {
+          showAnswer(normalizeString(action.target));
+          return;
+        }
+
+        if (type === "saveDocument") {
+          saveDraft();
+          return;
+        }
+
+        if (type === "exportDocument") {
+          exportJSON();
+          return;
+        }
+
+        setNotice("Unknown action type '" + type + "' was ignored.", "warning");
+        renderNoticeArea();
+      }
+
+      function showModal(payload) {
+        state.activeModal = {
+          title: normalizeString(payload.title) || "Modal",
+          content: normalizeString(payload.content) || ""
+        };
+        renderModal();
+      }
+
+      function hideModal() {
+        state.activeModal = null;
+        renderModal();
+      }
+
+      function renderModal() {
+        var layer = refs.modalLayer;
+        layer.innerHTML = "";
+
+        if (!state.activeModal) {
+          layer.classList.remove("is-open");
+          layer.setAttribute("aria-hidden", "true");
+          return;
+        }
+
+        layer.classList.add("is-open");
+        layer.setAttribute("aria-hidden", "false");
+
+        var backdrop = createElement("div", "modal-backdrop");
+        backdrop.addEventListener("click", hideModal);
+
+        var card = createElement("div", "modal-card");
+        card.setAttribute("role", "dialog");
+        card.setAttribute("aria-modal", "true");
+        card.setAttribute("aria-labelledby", "modal-title");
+
+        var title = createElement("h2", "modal-title", state.activeModal.title);
+        title.id = "modal-title";
+        var copy = createElement("p", "modal-copy", state.activeModal.content);
+        var actions = createElement("div", "modal-actions");
+        var closeButton = createButton("Close", "button primary", hideModal);
+        closeButton.id = "modal-close";
+        actions.appendChild(closeButton);
+
+        card.appendChild(title);
+        card.appendChild(copy);
+        card.appendChild(actions);
+        layer.appendChild(backdrop);
+        layer.appendChild(card);
+
+        requestAnimationFrame(function () {
+          closeButton.focus();
+        });
+      }
+
+      function setTheme(theme, persist) {
+        state.theme = normalizeTheme(theme);
+        document.documentElement.setAttribute("data-theme", state.theme);
+        if (persist !== false) {
+          persistPrefs();
+        }
+      }
+
+      function goToPage(pageIndex, smooth) {
+        if (!getPageCount()) {
+          return;
+        }
+
+        var nextIndex = clamp(isFiniteNumber(pageIndex) ? Number(pageIndex) : 0, 0, getPageCount() - 1);
+        state.currentPage = nextIndex;
+        persistPrefs();
+        renderToolbar();
+
+        var pageNode = refs.pageMap && refs.pageMap.get(nextIndex);
+        if (pageNode) {
+          pageNode.scrollIntoView({ behavior: smooth === false ? "auto" : "smooth", block: "start", inline: "nearest" });
+        }
+      }
+
+      function searchDocument(query) {
+        state.searchQuery = normalizeString(query);
+        var needle = state.searchQuery.trim().toLowerCase();
+        if (!needle) {
+          state.searchResults = [];
+          renderApp();
+          return;
+        }
+
+        state.searchResults = getActiveDocument().pages.reduce(function (results, page, pageIndex) {
+          var haystack = page.elements.map(extractSearchText).join("\n").toLowerCase();
+          if (haystack.indexOf(needle) !== -1) {
+            results.push({
+              pageIndex: pageIndex,
+              pageId: page.id,
+              title: page.title
+            });
+          }
+          return results;
+        }, []);
+
+        renderApp();
+      }
+
+      function enterEditMode() {
+        state.editorMode = true;
+        renderApp();
+      }
+
+      function exitEditMode() {
+        state.editorMode = false;
+        renderApp();
+      }
+
+      function saveDraft() {
+        var text = getEditorText() || JSON.stringify(getActiveDocument(), null, 2);
+        state.draftJSONText = text;
+        try {
+          localStorage.setItem(DRAFT_KEY, text);
+          setNotice("Draft saved locally in this browser.", "success");
+        } catch (error) {
+          setNotice("Local draft save failed: " + error.message, "error");
+        }
+        renderNoticeArea();
+      }
+
+      function importJSON(file) {
+        if (!file) {
+          return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function () {
+          var text = typeof reader.result === "string" ? reader.result : "";
+          state.draftJSONText = text;
+          state.editorMode = true;
+          applyDraftText(text, "imported document");
+        };
+        reader.onerror = function () {
+          state.editorMode = true;
+          state.validationError = "The selected JSON file could not be read.";
+          setNotice(state.validationError, "error");
+          renderApp();
+        };
+        reader.readAsText(file);
+      }
+
+      function exportJSON() {
+        var doc = getActiveDocument();
+        var text = JSON.stringify(doc, null, 2);
+        var base = normalizeString(doc.meta.title).trim() || "idoc-document";
+        downloadFile(slugify(base) + ".json", text, "application/json");
+        setNotice("Current document JSON exported.", "success");
+        renderNoticeArea();
+      }
+
+      function resetToDemo() {
+        state.draftJSONText = embeddedText;
+        state.validationError = "";
+        state.userAnswers = {};
+        state.questionResults = {};
+        state.revealedAnswers = {};
+        state.localInputs = {};
+
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch (error) {
+          setNotice("Reset applied, but the local draft could not be cleared: " + error.message, "warning");
+        }
+
+        applyDraftText(embeddedText, "embedded demo");
+        state.currentPage = 0;
+        goToPage(0, false);
+        setNotice("The embedded demo document has been restored.", "success");
+        renderApp();
+      }
+
+      function renderEditor() {
+        var panel = refs.editorPanel;
+        panel.innerHTML = "";
+
+        if (!state.editorMode) {
+          return;
+        }
+
+        var stack = createElement("div", "editor-stack");
+
+        var introCard = createElement("section", "editor-card");
+        introCard.appendChild(createElement("h2", "", "Edit JSON"));
+        introCard.appendChild(createElement("p", "editor-copy", "Edit the raw document JSON, apply a live preview, save a local draft, or import another JSON file. The viewer continues using the last valid document if the draft is temporarily invalid."));
+        introCard.appendChild(createPill("Recommended filename: " + getActiveDocument().meta.recommendedFilename));
+        stack.appendChild(introCard);
+
+        if (state.validationError) {
+          stack.appendChild(renderNotice(state.validationError, "error"));
+        }
+
+        var editorCard = createElement("section", "editor-card");
+        var fieldStack = createElement("div", "field-stack");
+        var label = document.createElement("label");
+        label.setAttribute("for", "editor-textarea");
+        label.textContent = "Document JSON";
+        var textarea = document.createElement("textarea");
+        textarea.id = "editor-textarea";
+        textarea.className = "editor-textarea";
+        textarea.value = state.draftJSONText;
+        textarea.setAttribute("spellcheck", "false");
+        textarea.addEventListener("input", function (event) {
+          state.draftJSONText = event.target.value;
+          scheduleAutosave();
+        });
+        fieldStack.appendChild(label);
+        fieldStack.appendChild(textarea);
+        editorCard.appendChild(fieldStack);
+
+        var actions = createElement("div", "editor-actions");
+        actions.appendChild(createButton("Apply preview", "button primary", function () {
+          applyDraftText(getEditorText(), "editor preview");
+        }));
+        actions.appendChild(createButton("Save draft", "button", function () {
+          saveDraft();
+        }));
+        actions.appendChild(createButton("Export JSON", "button", function () {
+          exportJSON();
+        }));
+        actions.appendChild(createButton("Reset demo", "button warn", function () {
+          resetToDemo();
+        }));
+        actions.appendChild(createButton("Close editor", "button ghost", function () {
+          exitEditMode();
+        }));
+        editorCard.appendChild(actions);
+        stack.appendChild(editorCard);
+
+        var importCard = createElement("section", "editor-card");
+        importCard.appendChild(createElement("h3", "", "Import JSON"));
+        importCard.appendChild(createElement("p", "editor-copy", "Choose a .json file to replace the current draft and preview it if the content validates."));
+        var importWrap = createElement("div", "inline-file");
+        var importLabel = document.createElement("label");
+        importLabel.className = "button";
+        importLabel.textContent = "Choose file";
+        importLabel.setAttribute("for", "editor-import");
+        var importInput = document.createElement("input");
+        importInput.type = "file";
+        importInput.id = "editor-import";
+        importInput.accept = ".json,application/json";
+        importInput.addEventListener("change", function (event) {
+          importJSON(event.target.files && event.target.files[0]);
+          event.target.value = "";
+        });
+        importWrap.appendChild(importLabel);
+        importWrap.appendChild(importInput);
+        importCard.appendChild(importWrap);
+        stack.appendChild(importCard);
+
+        panel.appendChild(stack);
+      }
+
+      function applyDraftText(text, sourceLabel) {
+        state.draftJSONText = typeof text === "string" ? text : "";
+        var result = tryParseAndValidate(state.draftJSONText, sourceLabel);
+        if (!result.ok) {
+          state.validationError = result.errorMessage;
+          setNotice("Preview update failed. The last valid document remains visible.", "warning");
+          renderApp();
+          return;
+        }
+
+        state.activeDocument = result.document;
+        state.validationWarnings = result.warnings;
+        state.validationError = "";
+        state.userAnswers = {};
+        state.questionResults = {};
+        state.revealedAnswers = {};
+        state.localInputs = {};
+        state.currentPage = clamp(state.currentPage, 0, getPageCount() - 1);
+        setTheme(state.theme || getDocumentTheme(), true);
+        persistPrefs();
+        setNotice("Preview updated successfully.", "success");
+        renderApp();
+      }
+
+      function loadKatexAssets() {
+        if (state.katexLoadAttempted) {
+          return;
+        }
+
+        state.katexLoadAttempted = true;
+        loadScript(KATEX_SCRIPT_URL)
+          .then(function () {
+            return loadScript(KATEX_AUTORENDER_URL);
+          })
+          .then(function () {
+            state.katexReady = Boolean(window.katex);
+            renderMathBlocks();
+          })
+          .catch(function () {
+            state.katexReady = false;
+            setNotice("KaTeX could not be loaded. Math is shown as plain text fallback.", "warning");
+            renderNoticeArea();
+          });
+      }
+
+      function onDocumentScroll() {
+        window.requestAnimationFrame(updateCurrentPageFromScroll);
+      }
+
+      function updateCurrentPageFromScroll() {
+        if (!refs.pageMap || !refs.pageMap.size) {
+          return;
+        }
+
+        var scrollTop = refs.documentScroll.scrollTop;
+        var viewportAnchor = scrollTop + refs.documentScroll.clientHeight * 0.3;
+        var bestIndex = state.currentPage;
+
+        refs.pageMap.forEach(function (node, index) {
+          if (node.offsetTop <= viewportAnchor) {
+            bestIndex = index;
+          }
+        });
+
+        if (bestIndex !== state.currentPage) {
+          state.currentPage = bestIndex;
+          persistPrefs();
+          renderToolbar();
+        }
+      }
+
+      function renderMathBlocks() {
+        var mathNodes = refs.pageStack.querySelectorAll("[data-math]");
+        mathNodes.forEach(function (node) {
+          var tex = node.dataset.math || "";
+          if (state.katexReady && window.katex) {
+            try {
+              window.katex.render(tex, node, {
+                throwOnError: false,
+                displayMode: node.dataset.displayMode === "true"
+              });
+            } catch (error) {
+              node.textContent = toMathFallback(tex);
+            }
+          } else {
+            node.textContent = toMathFallback(tex);
+          }
+        });
+      }
+
+      function scheduleAutosave() {
+        window.clearTimeout(autosaveTimer);
+        autosaveTimer = window.setTimeout(function () {
+          try {
+            localStorage.setItem(DRAFT_KEY, state.draftJSONText);
+          } catch (error) {
+            setNotice("Autosave failed: " + error.message, "warning");
+            renderNoticeArea();
+          }
+        }, 600);
+      }
+
+      function evaluateQuestion(questionId) {
+        var question = findQuestionById(questionId);
+        if (!question) {
+          setNotice("The requested question could not be found.", "warning");
+          renderNoticeArea();
+          return;
+        }
+        if (state.userAnswers[questionId] == null) {
+          setNotice("Select an answer before evaluating the question.", "warning");
+          renderNoticeArea();
+          return;
+        }
+
+        var expected = isFiniteNumber(question.answer) ? Number(question.answer) : null;
+        state.questionResults[questionId] = {
+          isCorrect: expected !== null && Number(state.userAnswers[questionId]) === expected
+        };
+        renderApp();
+      }
+
+      function showAnswer(questionId) {
+        if (!findQuestionById(questionId)) {
+          setNotice("The requested answer target could not be found.", "warning");
+          renderNoticeArea();
+          return;
+        }
+        state.revealedAnswers[questionId] = true;
+        renderApp();
+      }
+
+      function tryParseAndValidate(text, sourceLabel) {
+        try {
+          var parsed = parseDocumentData(text);
+          var validated = validateDocument(parsed);
+          return {
+            ok: true,
+            document: validated.document,
+            warnings: validated.warnings
+          };
+        } catch (error) {
+          return {
+            ok: false,
+            errorMessage: "Failed to parse " + sourceLabel + ": " + error.message
+          };
+        }
+      }
+
+      function loadDraftText() {
+        try {
+          return localStorage.getItem(DRAFT_KEY) || "";
+        } catch (error) {
+          setNotice("Local storage is unavailable. Draft persistence is disabled.", "warning");
+          return "";
+        }
+      }
+
+      function loadPrefs() {
+        try {
+          var raw = localStorage.getItem(PREFS_KEY);
+          return raw ? JSON.parse(raw) : {};
+        } catch (error) {
+          return {};
+        }
+      }
+
+      function persistPrefs() {
+        try {
+          localStorage.setItem(PREFS_KEY, JSON.stringify({
+            currentPage: state.currentPage,
+            theme: state.theme
+          }));
+        } catch (error) {
+          // Ignore preference persistence failures.
+        }
+      }
+
+      function getInitialCurrentPage() {
+        var prefs = loadPrefs();
+        if (isFiniteNumber(prefs.currentPage)) {
+          return Number(prefs.currentPage);
+        }
+        return getActiveDocument().state.currentPage || 0;
+      }
+
+      function getDocumentTheme() {
+        return getActiveDocument().meta.theme || "light";
+      }
+
+      function extractSearchText(element) {
+        if (!element || !SEARCHABLE_TYPES.has(normalizeString(element.type).toLowerCase())) {
+          return "";
+        }
+
+        if (element.type === "callout") {
+          return [element.title, element.text].map(normalizeString).join(" ");
+        }
+        if (element.type === "code") {
+          return normalizeString(element.code);
+        }
+        return normalizeString(element.text);
+      }
+
+      function resolveAction(actionRef) {
+        if (typeof actionRef === "string") {
+          return getActiveDocument().actions[actionRef] || null;
+        }
+        if (isPlainObject(actionRef)) {
+          return actionRef;
+        }
+        return null;
+      }
+
+      function findQuestionById(questionId) {
+        var result = null;
+        getActiveDocument().pages.some(function (page) {
+          return page.elements.some(function (element) {
+            if (normalizeString(element.type) === "question" && normalizeString(element.id) === questionId) {
+              result = element;
+              return true;
+            }
+            return false;
+          });
+        });
+        return result;
+      }
+
+      function setNotice(message, tone) {
+        state.notice = {
+          message: normalizeString(message),
+          tone: tone || "info"
+        };
+        window.clearTimeout(noticeTimer);
+        noticeTimer = window.setTimeout(function () {
+          state.notice = null;
+          renderNoticeArea();
+        }, 4400);
+      }
+
+      function renderNotice(message, tone) {
+        return createElement("div", "notice-banner " + (tone || "info"), message);
+      }
+
+      function createPill(text) {
+        return createElement("span", "meta-pill", text);
+      }
+
+      function renderWarningBlock(title, copy) {
+        var block = createElement("div", "doc-warning");
+        block.appendChild(createElement("h3", "doc-warning-title", title));
+        block.appendChild(createElement("p", "doc-warning-copy", copy));
+        return block;
+      }
+
+      function createElement(tagName, className, textContent) {
+        var node = document.createElement(tagName);
+        if (className) {
+          node.className = className;
+        }
+        if (textContent != null) {
+          node.textContent = textContent;
+        }
+        return node;
+      }
+
+      function createButton(label, className, onClick) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = className || "button";
+        button.textContent = label;
+        button.addEventListener("click", onClick);
+        return button;
+      }
+
+      function setHighlightedText(node, text) {
+        node.textContent = "";
+        node.appendChild(createHighlightedFragment(normalizeString(text), state.searchQuery));
+      }
+
+      function createHighlightedFragment(text, query) {
+        var fragment = document.createDocumentFragment();
+        var safeText = normalizeString(text);
+        var safeQuery = normalizeString(query).trim();
+
+        if (!safeQuery) {
+          fragment.appendChild(document.createTextNode(safeText));
+          return fragment;
+        }
+
+        var regex = new RegExp(escapeRegExp(safeQuery), "ig");
+        var lastIndex = 0;
+        var match;
+        while ((match = regex.exec(safeText)) !== null) {
+          if (match.index > lastIndex) {
+            fragment.appendChild(document.createTextNode(safeText.slice(lastIndex, match.index)));
+          }
+          var mark = document.createElement("mark");
+          mark.textContent = match[0];
+          fragment.appendChild(mark);
+          lastIndex = match.index + match[0].length;
+        }
+
+        if (lastIndex < safeText.length) {
+          fragment.appendChild(document.createTextNode(safeText.slice(lastIndex)));
+        }
+
+        return fragment;
+      }
+
+      function captureFocusState() {
+        var active = document.activeElement;
+        if (!active || !active.id) {
+          return null;
+        }
+
+        return {
+          id: active.id,
+          start: typeof active.selectionStart === "number" ? active.selectionStart : null,
+          end: typeof active.selectionEnd === "number" ? active.selectionEnd : null
+        };
+      }
+
+      function restoreFocusState(snapshot) {
+        if (!snapshot || !snapshot.id) {
+          return;
+        }
+        var target = document.getElementById(snapshot.id);
+        if (!target) {
+          return;
+        }
+        target.focus({ preventScroll: true });
+        if (snapshot.start != null && snapshot.end != null && typeof target.setSelectionRange === "function") {
+          target.setSelectionRange(snapshot.start, snapshot.end);
+        }
+      }
+
+      function downloadFile(filename, text, mimeType) {
+        var blob = new Blob([text], { type: mimeType });
+        var url = URL.createObjectURL(blob);
+        var anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.setTimeout(function () {
+          URL.revokeObjectURL(url);
+        }, 0);
+      }
+
+      function getEditorText() {
+        var textarea = document.getElementById("editor-textarea");
+        return textarea ? textarea.value : state.draftJSONText;
+      }
+
+      function getActiveDocument() {
+        return state.activeDocument || validateDocument(buildEmergencyDocument("No active document was available.")).document;
+      }
+
+      function getPageCount() {
+        return getActiveDocument().pages.length;
+      }
+
+      function buildEmergencyDocument(reason) {
+        return {
+          meta: {
+            title: "iDoc Recovery",
+            author: "System",
+            version: "1.0",
+            theme: "light",
+            recommendedFilename: "example.idoc.html"
+          },
+          state: {
+            currentPage: 0
+          },
+          pages: [
+            {
+              id: "recovery-page",
+              title: "Recovery",
+              elements: [
+                {
+                  type: "heading",
+                  level: 1,
+                  text: "Document recovery mode"
+                },
+                {
+                  type: "paragraph",
+                  text: normalizeString(reason) || "The document could not be rendered."
+                },
+                {
+                  type: "paragraph",
+                  text: "Open edit mode to inspect or replace the JSON content."
+                }
+              ]
+            }
+          ],
+          actions: {}
+        };
+      }
+
+      function sanitizeLinkUrl(url) {
+        if (!url) {
+          return "";
+        }
+        try {
+          var parsed = new URL(url, window.location.href);
+          if (parsed.protocol === "http:" || parsed.protocol === "https:" || parsed.protocol === "mailto:") {
+            return parsed.href;
+          }
+        } catch (error) {
+          return "";
+        }
+        return "";
+      }
+
+      function sanitizeImageSrc(url) {
+        if (!url) {
+          return "";
+        }
+        if (/^data:image\//i.test(url)) {
+          return url;
+        }
+        return sanitizeLinkUrl(url);
+      }
+
+      function loadScript(src) {
+        return new Promise(function (resolve, reject) {
+          var existing = document.querySelector('script[data-external-src="' + src + '"]');
+          if (existing) {
+            if (existing.dataset.loaded === "true") {
+              resolve();
+              return;
+            }
+            existing.addEventListener("load", resolve, { once: true });
+            existing.addEventListener("error", reject, { once: true });
+            return;
+          }
+
+          var script = document.createElement("script");
+          script.src = src;
+          script.async = true;
+          script.dataset.externalSrc = src;
+          script.addEventListener("load", function () {
+            script.dataset.loaded = "true";
+            resolve();
+          }, { once: true });
+          script.addEventListener("error", reject, { once: true });
+          document.head.appendChild(script);
+        });
+      }
+
+      function toMathFallback(tex) {
+        return "$$ " + normalizeString(tex) + " $$";
+      }
+
+      function normalizeString(value) {
+        if (value == null) {
+          return "";
+        }
+        return String(value);
+      }
+
+      function normalizeTheme(value) {
+        return normalizeString(value).toLowerCase() === "dark" ? "dark" : "light";
+      }
+
+      function normalizeCalloutTone(value) {
+        var tone = normalizeString(value).toLowerCase();
+        if (tone === "warn" || tone === "success") {
+          return tone;
+        }
+        return "info";
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function slugify(value) {
+        return normalizeString(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "idoc-document";
+      }
+
+      function escapeRegExp(value) {
+        return normalizeString(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      }
+
+      function isFiniteNumber(value) {
+        return value !== null && value !== "" && Number.isFinite(Number(value));
+      }
+
+      function isPlainObject(value) {
+        return value != null && typeof value === "object" && !Array.isArray(value);
+      }
+
+      function setValueByPath(target, path, value) {
+        if (!isPlainObject(target) || !normalizeString(path)) {
+          return;
+        }
+
+        var keys = normalizeString(path).split(".").filter(Boolean);
+        if (!keys.length) {
+          return;
+        }
+
+        var current = target;
+        for (var index = 0; index < keys.length - 1; index += 1) {
+          if (!isPlainObject(current[keys[index]])) {
+            current[keys[index]] = {};
+          }
+          current = current[keys[index]];
+        }
+        current[keys[keys.length - 1]] = value;
+      }
+    })();
+  </script>
+</body>
+</html>
