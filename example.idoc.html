@@ -765,6 +765,110 @@
       background: color-mix(in srgb, var(--accent-soft) 82%, var(--surface-strong) 18%);
     }
 
+    .editable-text {
+      position: relative;
+      cursor: text;
+      border-radius: 12px;
+      transition: background-color 140ms ease, box-shadow 140ms ease, outline-color 140ms ease;
+    }
+
+    .editable-text:hover,
+    .editable-text:focus-visible {
+      background: color-mix(in srgb, var(--accent-soft) 60%, transparent 40%);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent 72%);
+    }
+
+    .editable-text::after {
+      content: "Edit";
+      position: absolute;
+      top: -10px;
+      right: 10px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: color-mix(in srgb, var(--surface-strong) 94%, transparent 6%);
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      color: var(--muted);
+      opacity: 0;
+      transform: translateY(2px);
+      transition: opacity 140ms ease, transform 140ms ease;
+      pointer-events: none;
+    }
+
+    .editable-text:hover::after,
+    .editable-text:focus-visible::after {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .editable-control {
+      cursor: pointer;
+    }
+
+    .editable-control::after {
+      right: 8px;
+      top: -8px;
+    }
+
+    .inline-editor {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--page-border) 62%);
+      background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface-strong) 40%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .inline-editor.compact {
+      padding: 10px;
+      gap: 8px;
+    }
+
+    .inline-editor-label {
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .inline-editor-input {
+      width: 100%;
+      min-height: 44px;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      background: var(--surface-strong);
+      color: var(--text);
+      font: inherit;
+      line-height: 1.55;
+      resize: vertical;
+    }
+
+    .inline-editor-input.code {
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      min-height: 150px;
+    }
+
+    .inline-editor-help {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    .inline-editor-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
     mark {
       background: color-mix(in srgb, var(--warning) 32%, white 68%);
       color: inherit;
@@ -900,6 +1004,442 @@
       .search-wrap {
         min-width: 100%;
         max-width: none;
+      }
+    }
+    .toolbar {
+      padding: 10px 14px 8px;
+    }
+
+    .toolbar-main {
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+    }
+
+    .toolbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand {
+      gap: 12px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .brand-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      font-size: 1rem;
+      box-shadow: none;
+    }
+
+    .brand-title {
+      font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .brand-meta {
+      margin-top: 3px;
+      display: block;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    .toolbar-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .toolbar-tools {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .search-wrap {
+      flex: 0 1 320px;
+      min-width: 180px;
+      max-width: 360px;
+      min-height: 40px;
+      padding: 0 12px;
+      gap: 10px;
+      border-radius: 14px;
+    }
+
+    .search-wrap input {
+      height: 40px;
+    }
+
+    .icon-button {
+      appearance: none;
+      width: 40px;
+      height: 40px;
+      border: 1px solid color-mix(in srgb, var(--page-border) 72%, transparent 28%);
+      background: var(--surface-strong);
+      color: var(--text);
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      cursor: pointer;
+      box-shadow: none;
+      transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+
+    .icon-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--page-border) 55%);
+    }
+
+    .icon-button.is-active {
+      background: color-mix(in srgb, var(--accent-soft) 78%, var(--surface-strong) 22%);
+      color: var(--accent-strong);
+      border-color: color-mix(in srgb, var(--accent) 40%, var(--page-border) 60%);
+    }
+
+    .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      color: currentColor;
+      flex: 0 0 auto;
+    }
+
+    .icon svg {
+      width: 100%;
+      height: 100%;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .page-indicator {
+      min-width: 126px;
+      min-height: 40px;
+      border-radius: 12px;
+      padding: 8px 14px;
+      box-shadow: none;
+    }
+
+    .toolbar-subrow {
+      margin-top: 8px;
+      padding-left: 54px;
+      min-height: 18px;
+      font-size: 0.84rem;
+    }
+
+    .overflow-root {
+      position: relative;
+      display: flex;
+    }
+
+    .overflow-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: min(260px, calc(100vw - 24px));
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      border-radius: 18px;
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      background: color-mix(in srgb, var(--surface-strong) 95%, transparent 5%);
+      box-shadow: var(--shadow-md);
+      z-index: 20;
+    }
+
+    .overflow-head {
+      padding: 6px 8px 8px;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .overflow-action {
+      width: 100%;
+      justify-content: flex-start;
+      min-height: 40px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+      font-size: 0.94rem;
+    }
+
+    .overflow-action:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--surface-soft) 82%, transparent 18%);
+      transform: none;
+    }
+
+    .overflow-note {
+      padding: 8px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    .workspace,
+    .workspace.is-editor {
+      position: relative;
+      grid-template-columns: 280px minmax(0, 1fr);
+    }
+
+    .workspace.is-sidebar-collapsed,
+    .workspace.is-editor.is-sidebar-collapsed {
+      grid-template-columns: 0 minmax(0, 1fr);
+    }
+
+    .sidebar {
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px 12px 16px;
+      border-right: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      background: color-mix(in srgb, var(--surface) 90%, transparent 10%);
+      backdrop-filter: blur(14px);
+      transition: transform 180ms ease, opacity 180ms ease, padding 180ms ease;
+    }
+
+    .workspace.is-sidebar-collapsed .sidebar {
+      opacity: 0;
+      pointer-events: none;
+      overflow: hidden;
+      padding-left: 0;
+      padding-right: 0;
+      border-right: 0;
+      transform: translateX(-10px);
+    }
+
+    .sidebar-header {
+      padding: 4px 4px 8px;
+    }
+
+    .sidebar-title {
+      margin: 0;
+      font-size: 0.94rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .sidebar-caption {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .sidebar-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sidebar-page {
+      appearance: none;
+      width: 100%;
+      text-align: left;
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--surface-strong) 92%, transparent 8%);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      cursor: pointer;
+      transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+    }
+
+    .sidebar-page:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--accent) 42%, var(--page-border) 58%);
+    }
+
+    .sidebar-page.is-active {
+      background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface-strong) 28%);
+      border-color: color-mix(in srgb, var(--accent) 45%, var(--page-border) 55%);
+    }
+
+    .sidebar-page-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-page-number,
+    .sidebar-page-hit {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      background: var(--surface-soft);
+      color: var(--muted);
+    }
+
+    .sidebar-page-hit {
+      color: color-mix(in srgb, var(--accent) 86%, var(--text) 14%);
+      background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface-strong) 30%);
+    }
+
+    .sidebar-page-title {
+      font-size: 0.96rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .sidebar-page-preview {
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.45;
+      display: -webkit-box;
+      line-clamp: 3;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 10px 8px 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    .viewer-pane {
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .editor-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(430px, 100%);
+      border-left: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      border-right: 0;
+      background: color-mix(in srgb, var(--surface) 94%, transparent 6%);
+      transform: translateX(100%);
+      transition: transform 220ms ease;
+      display: block;
+      z-index: 30;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .workspace.is-editor .editor-panel {
+      transform: translateX(0);
+    }
+
+    @media (max-width: 1120px) {
+      .toolbar-main {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      .toolbar-brand {
+        grid-column: 1 / -1;
+      }
+
+      .toolbar-nav {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .toolbar {
+        padding: 10px 10px 8px;
+      }
+
+      .toolbar-main {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar-brand,
+      .toolbar-nav,
+      .toolbar-tools {
+        grid-column: auto;
+        justify-content: flex-start;
+      }
+
+      .toolbar-tools {
+        flex-wrap: wrap;
+      }
+
+      .search-wrap {
+        order: 1;
+        flex: 1 1 100%;
+        max-width: none;
+      }
+
+      .toolbar-subrow {
+        padding-left: 0;
+      }
+
+      .workspace,
+      .workspace.is-editor,
+      .workspace.is-sidebar-collapsed,
+      .workspace.is-editor.is-sidebar-collapsed {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .sidebar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: min(82vw, 320px);
+        z-index: 26;
+        box-shadow: var(--shadow-lg);
+        transform: translateX(0);
+      }
+
+      .workspace.is-sidebar-collapsed .sidebar {
+        transform: translateX(-100%);
+        opacity: 1;
+        padding-left: 12px;
+        padding-right: 12px;
+        border-right: 1px solid color-mix(in srgb, var(--page-border) 75%, transparent 25%);
+      }
+
+      .editor-panel {
+        width: min(88vw, 420px);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .brand-badge {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+      }
+
+      .page-indicator {
+        min-width: 108px;
+        padding: 8px 10px;
       }
     }
   </style>
@@ -1153,6 +1693,9 @@
         currentPage: 0,
         theme: "light",
         activeModal: null,
+        sidebarOpen: window.innerWidth > 980,
+        menuOpen: false,
+        inlineEditor: null,
         userAnswers: {},
         questionResults: {},
         revealedAnswers: {},
@@ -1227,6 +1770,10 @@
         var workspace = createElement("div", "workspace");
         workspace.id = "workspace";
 
+        var sidebar = createElement("aside", "sidebar");
+        sidebar.id = "sidebar";
+        sidebar.setAttribute("data-sidebar-root", "true");
+
         var editorPanel = createElement("aside", "editor-panel");
         editorPanel.id = "editor-panel";
 
@@ -1256,8 +1803,9 @@
         documentScroll.appendChild(pageStack);
         viewerPane.appendChild(noticeArea);
         viewerPane.appendChild(documentScroll);
-        workspace.appendChild(editorPanel);
+        workspace.appendChild(sidebar);
         workspace.appendChild(viewerPane);
+        workspace.appendChild(editorPanel);
         shell.appendChild(toolbar);
         shell.appendChild(workspace);
         shell.appendChild(modalLayer);
@@ -1267,6 +1815,7 @@
         refs.appShell = shell;
         refs.toolbar = toolbar;
         refs.workspace = workspace;
+        refs.sidebar = sidebar;
         refs.editorPanel = editorPanel;
         refs.viewerPane = viewerPane;
         refs.noticeArea = noticeArea;
@@ -1283,10 +1832,42 @@
           event.target.value = "";
         });
 
+        document.addEventListener("click", function (event) {
+          if (state.menuOpen && !event.target.closest("[data-overflow-root]")) {
+            state.menuOpen = false;
+            renderToolbar();
+          }
+
+          if (state.sidebarOpen && isCompactLayout() && !event.target.closest("[data-sidebar-root]") && !event.target.closest("[data-sidebar-toggle]")) {
+            state.sidebarOpen = false;
+            renderApp();
+          }
+        });
+
         document.addEventListener("keydown", function (event) {
           if (state.activeModal && event.key === "Escape") {
             event.preventDefault();
             hideModal();
+            return;
+          }
+
+          if (state.menuOpen && event.key === "Escape") {
+            event.preventDefault();
+            state.menuOpen = false;
+            renderToolbar();
+            return;
+          }
+
+          if (state.editorMode && event.key === "Escape") {
+            event.preventDefault();
+            exitEditMode();
+            return;
+          }
+
+          if (state.sidebarOpen && isCompactLayout() && event.key === "Escape") {
+            event.preventDefault();
+            state.sidebarOpen = false;
+            renderApp();
             return;
           }
 
@@ -1415,12 +1996,59 @@
         var focusState = captureFocusState();
         var previousScrollTop = refs.documentScroll ? refs.documentScroll.scrollTop : 0;
         refs.workspace.classList.toggle("is-editor", Boolean(state.editorMode));
+        refs.workspace.classList.toggle("is-sidebar-collapsed", !state.sidebarOpen);
+        refs.sidebar.setAttribute("aria-hidden", state.sidebarOpen ? "false" : "true");
         renderToolbar();
+        renderSidebar();
         renderNoticeArea();
         renderDocument(previousScrollTop);
         renderEditor();
         renderModal();
         restoreFocusState(focusState);
+      }
+
+      function renderSidebar() {
+        var sidebar = refs.sidebar;
+        if (!sidebar) {
+          return;
+        }
+
+        sidebar.innerHTML = "";
+        var doc = getActiveDocument();
+
+        var header = createElement("div", "sidebar-header");
+        header.appendChild(createElement("h2", "sidebar-title", "Pages"));
+        header.appendChild(createElement("div", "sidebar-caption", getPageCount() + " page" + (getPageCount() === 1 ? "" : "s") + " in this iDoc"));
+        sidebar.appendChild(header);
+
+        var list = createElement("div", "sidebar-list");
+        doc.pages.forEach(function (page, pageIndex) {
+          var item = document.createElement("button");
+          item.type = "button";
+          item.className = "sidebar-page" + (pageIndex === state.currentPage ? " is-active" : "");
+          item.addEventListener("click", function () {
+            goToPage(pageIndex, true);
+            if (isCompactLayout()) {
+              state.sidebarOpen = false;
+              renderApp();
+            }
+          });
+
+          var top = createElement("div", "sidebar-page-top");
+          top.appendChild(createElement("span", "sidebar-page-number", "Page " + (pageIndex + 1)));
+          if (pageHasSearchHit(pageIndex)) {
+            top.appendChild(createElement("span", "sidebar-page-hit", "Match"));
+          }
+
+          item.appendChild(top);
+          item.appendChild(createElement("div", "sidebar-page-title", page.title));
+          item.appendChild(createElement("div", "sidebar-page-preview", getPagePreviewText(page)));
+          list.appendChild(item);
+        });
+        sidebar.appendChild(list);
+
+        var footer = createElement("div", "sidebar-footer", "Recommended filename: " + doc.meta.recommendedFilename);
+        sidebar.appendChild(footer);
       }
 
       function renderToolbar() {
@@ -1431,45 +2059,45 @@
         var pageCount = getPageCount();
 
         var main = createElement("div", "toolbar-main");
+        var brandWrap = createElement("div", "toolbar-brand");
+        var sidebarButton = createIconButton(state.sidebarOpen ? "Hide page sidebar" : "Show page sidebar", "menu", "icon-button" + (state.sidebarOpen ? " is-active" : ""), function (event) {
+          event.stopPropagation();
+          state.sidebarOpen = !state.sidebarOpen;
+          renderApp();
+        });
+        sidebarButton.setAttribute("data-sidebar-toggle", "true");
+
         var brand = createElement("div", "brand");
         var badge = createElement("div", "brand-badge", "ID");
         var brandCopy = createElement("div", "brand-copy");
         var title = createElement("h1", "brand-title", doc.meta.title);
-        var meta = createElement("div", "brand-meta");
-        meta.appendChild(createPill("Author: " + doc.meta.author));
-        meta.appendChild(createPill("Version " + doc.meta.version));
-        meta.appendChild(createPill("Recommended filename: " + doc.meta.recommendedFilename));
+        var meta = createElement("div", "brand-meta", "Author: " + doc.meta.author + " | Version " + doc.meta.version);
         brandCopy.appendChild(title);
         brandCopy.appendChild(meta);
         brand.appendChild(badge);
         brand.appendChild(brandCopy);
+        brandWrap.appendChild(sidebarButton);
+        brandWrap.appendChild(brand);
 
-        var controls = createElement("div", "toolbar-controls");
-        var row1 = createElement("div", "control-row");
-        var prevButton = createButton("Prev", "button small", function () {
+        var nav = createElement("div", "toolbar-nav");
+        var prevButton = createIconButton("Previous page", "chevron-left", "icon-button", function () {
           goToPage(state.currentPage - 1, true);
         });
         prevButton.disabled = state.currentPage <= 0;
         var pageIndicator = createElement("div", "page-indicator", "Page " + (state.currentPage + 1) + " / " + pageCount);
-        var nextButton = createButton("Next", "button small", function () {
+        var nextButton = createIconButton("Next page", "chevron-right", "icon-button", function () {
           goToPage(state.currentPage + 1, true);
         });
         nextButton.disabled = state.currentPage >= pageCount - 1;
-        row1.appendChild(prevButton);
-        row1.appendChild(pageIndicator);
-        row1.appendChild(nextButton);
+        nav.appendChild(prevButton);
+        nav.appendChild(pageIndicator);
+        nav.appendChild(nextButton);
 
-        var row2 = createElement("div", "control-row");
-        var focusSearchButton = createButton("Find", "button small ghost", function () {
-          var searchInput = document.getElementById("toolbar-search");
-          if (searchInput) {
-            searchInput.focus();
-            searchInput.select();
-          }
-        });
+        var tools = createElement("div", "toolbar-tools");
         var searchWrap = createElement("label", "search-wrap");
         searchWrap.setAttribute("for", "toolbar-search");
         var searchLabel = createElement("span", "sr-only", "Search the document");
+        searchWrap.appendChild(createIcon("search"));
         var searchInput = document.createElement("input");
         searchInput.id = "toolbar-search";
         searchInput.type = "search";
@@ -1487,60 +2115,159 @@
         searchWrap.appendChild(searchLabel);
         searchWrap.appendChild(searchInput);
 
-        var themeButton = createButton(state.theme === "dark" ? "Light theme" : "Dark theme", "button small", function () {
-          setTheme(state.theme === "dark" ? "light" : "dark", true);
-          renderApp();
-        });
-        var modeButton = createButton(state.editorMode ? "View mode" : "Edit mode", "button small", function () {
+        var editButton = createIconButton(state.editorMode ? "Close editor" : "Open editor", "draw", "icon-button" + (state.editorMode ? " is-active" : ""), function () {
           if (state.editorMode) {
             exitEditMode();
           } else {
             enterEditMode();
           }
         });
-        var saveButton = createButton("Save draft", "button small", function () {
-          saveDraft();
-        });
-        var exportButton = createButton("Export JSON", "button small primary", function () {
-          exportJSON();
-        });
-        var importButton = createButton("Import JSON", "button small", function () {
-          refs.toolbarImport.click();
-        });
-        var resetButton = createButton("Reset demo", "button small warn", function () {
-          resetToDemo();
-        });
 
-        row2.appendChild(focusSearchButton);
-        row2.appendChild(searchWrap);
-        row2.appendChild(themeButton);
-        row2.appendChild(modeButton);
-        row2.appendChild(saveButton);
-        row2.appendChild(exportButton);
-        row2.appendChild(importButton);
-        row2.appendChild(resetButton);
+        var overflowRoot = createElement("div", "overflow-root");
+        overflowRoot.setAttribute("data-overflow-root", "true");
+        var overflowButton = createIconButton(state.menuOpen ? "Close menu" : "Open menu", "more", "icon-button" + (state.menuOpen ? " is-active" : ""), function (event) {
+          event.stopPropagation();
+          state.menuOpen = !state.menuOpen;
+          renderToolbar();
+        });
+        overflowRoot.appendChild(overflowButton);
 
-        controls.appendChild(row1);
-        controls.appendChild(row2);
-        main.appendChild(brand);
-        main.appendChild(controls);
+        if (state.menuOpen) {
+          var overflowMenu = createElement("div", "overflow-menu");
+          overflowMenu.appendChild(createElement("div", "overflow-head", "Document actions"));
+          overflowMenu.appendChild(createOverflowAction(state.theme === "dark" ? "Switch to light theme" : "Switch to dark theme", function () {
+            setTheme(state.theme === "dark" ? "light" : "dark", true);
+            renderApp();
+          }));
+          overflowMenu.appendChild(createOverflowAction("Save draft", function () {
+            saveDraft();
+          }));
+          overflowMenu.appendChild(createOverflowAction("Export JSON", function () {
+            exportJSON();
+          }));
+          overflowMenu.appendChild(createOverflowAction("Import JSON", function () {
+            refs.toolbarImport.click();
+          }));
+          overflowMenu.appendChild(createOverflowAction("Reset demo", function () {
+            resetToDemo();
+          }));
+          overflowMenu.appendChild(createElement("div", "overflow-note", "Recommended filename: " + doc.meta.recommendedFilename));
+          overflowRoot.appendChild(overflowMenu);
+        }
+
+        tools.appendChild(searchWrap);
+        tools.appendChild(editButton);
+        tools.appendChild(overflowRoot);
+
+        main.appendChild(brandWrap);
+        main.appendChild(nav);
+        main.appendChild(tools);
         toolbar.appendChild(main);
 
-        var subrow = createElement("div", "toolbar-subrow");
-        if (!state.searchQuery.trim()) {
-          subrow.appendChild(createElement("span", "", "Search is ready. Press / to focus the search field."));
-        } else if (!state.searchResults.length) {
-          subrow.appendChild(createElement("span", "", "No matches found for \"" + state.searchQuery + "\"."));
-        } else {
-          subrow.appendChild(createElement("span", "", state.searchResults.length + " matching page" + (state.searchResults.length === 1 ? "" : "s") + " for \"" + state.searchQuery + "\":"));
-          state.searchResults.forEach(function (result) {
-            var chip = createButton("Page " + (result.pageIndex + 1), "page-chip", function () {
-              goToPage(result.pageIndex, true);
+        if (state.searchQuery.trim()) {
+          var subrow = createElement("div", "toolbar-subrow");
+          if (!state.searchResults.length) {
+            subrow.appendChild(createElement("span", "", "No matches found for \"" + state.searchQuery + "\"."));
+          } else {
+            subrow.appendChild(createElement("span", "", state.searchResults.length + " matching page" + (state.searchResults.length === 1 ? "" : "s") + " for \"" + state.searchQuery + "\":"));
+            state.searchResults.forEach(function (result) {
+              var chip = createButton("Page " + (result.pageIndex + 1), "page-chip", function () {
+                goToPage(result.pageIndex, true);
+              });
+              subrow.appendChild(chip);
             });
-            subrow.appendChild(chip);
-          });
+          }
+          toolbar.appendChild(subrow);
         }
-        toolbar.appendChild(subrow);
+      }
+
+      function createOverflowAction(label, onClick) {
+        return createButton(label, "button overflow-action", function () {
+          state.menuOpen = false;
+          renderToolbar();
+          onClick();
+        });
+      }
+
+      function startInlineEdit(target, initialValue, options) {
+        if (!state.editorMode || !target) {
+          return;
+        }
+
+        if (state.inlineEditor && getInlineTargetKey(state.inlineEditor) === getInlineTargetKey(target)) {
+          return;
+        }
+
+        if (state.inlineEditor) {
+          commitInlineEdit({ skipRender: true, silent: true });
+        }
+
+        state.menuOpen = false;
+        state.inlineEditor = Object.assign({
+          scope: "element",
+          pageIndex: 0,
+          elementId: "",
+          field: "text",
+          itemIndex: null,
+          initialValue: normalizeString(initialValue),
+          multiline: true,
+          rows: 4,
+          label: "Text",
+          code: false,
+          compact: false,
+          control: false
+        }, options || {}, target || {});
+
+        renderApp();
+        requestAnimationFrame(focusInlineEditorControl);
+      }
+
+      function commitInlineEdit(options) {
+        if (!state.inlineEditor) {
+          return false;
+        }
+
+        var behavior = options || {};
+        var target = state.inlineEditor;
+        var nextValue = getInlineEditorValue(target);
+        var nextDoc = cloneDocument(getActiveDocument());
+        var updated = applyInlineEditToDocument(nextDoc, target, nextValue);
+        state.inlineEditor = null;
+
+        if (!updated) {
+          if (!behavior.silent) {
+            setNotice("That text block could not be updated.", "warning");
+          }
+          if (!behavior.skipRender) {
+            renderApp();
+          }
+          return false;
+        }
+
+        state.activeDocument = nextDoc;
+        if (state.validationError) {
+          setNotice("Inline edit applied. The invalid raw draft was replaced with the live document.", "warning");
+        }
+        syncDraftTextFromDocument();
+
+        if (!behavior.skipRender) {
+          renderApp();
+        }
+        return true;
+      }
+
+      function cancelInlineEdit() {
+        if (!state.inlineEditor) {
+          return;
+        }
+        state.inlineEditor = null;
+        renderApp();
+      }
+
+      function syncDraftTextFromDocument() {
+        state.draftJSONText = JSON.stringify(getActiveDocument(), null, 2);
+        state.validationError = "";
+        scheduleAutosave();
       }
 
       function renderNoticeArea() {
@@ -1591,7 +2318,14 @@
         pageCard.setAttribute("aria-label", "Page " + (pageIndex + 1) + ": " + page.title);
 
         var header = createElement("div", "page-header");
-        var pageTitle = createElement("h2", "page-title", page.title);
+        var pageTitle = createEditableTextNode("h2", "page-title", page.title, {
+          scope: "page",
+          pageIndex: pageIndex,
+          field: "title"
+        }, {
+          label: "Page title",
+          multiline: false
+        });
         var pageLabel = createElement("div", "page-label", "Page " + (pageIndex + 1));
         header.appendChild(pageTitle);
         header.appendChild(pageLabel);
@@ -1615,22 +2349,41 @@
 
         if (type === "heading") {
           var level = clamp(parseInt(element.level, 10) || 1, 1, 6);
-          var heading = document.createElement("h" + level);
-          heading.className = "doc-heading level-" + level;
-          setHighlightedText(heading, normalizeString(element.text));
-          return heading;
+          return createEditableTextNode("h" + level, "doc-heading level-" + level, normalizeString(element.text), {
+            scope: "element",
+            pageIndex: pageIndex,
+            elementId: normalizeString(element.id),
+            field: "text"
+          }, {
+            label: "Heading",
+            multiline: false
+          });
         }
 
         if (type === "paragraph") {
-          var paragraph = createElement("p", "doc-paragraph");
-          setHighlightedText(paragraph, normalizeString(element.text));
-          return paragraph;
+          return createEditableTextNode("p", "doc-paragraph", normalizeString(element.text), {
+            scope: "element",
+            pageIndex: pageIndex,
+            elementId: normalizeString(element.id),
+            field: "text"
+          }, {
+            label: "Paragraph",
+            multiline: true,
+            rows: 5
+          });
         }
 
         if (type === "text") {
-          var text = createElement("div", "doc-text");
-          setHighlightedText(text, normalizeString(element.text));
-          return text;
+          return createEditableTextNode("div", "doc-text", normalizeString(element.text), {
+            scope: "element",
+            pageIndex: pageIndex,
+            elementId: normalizeString(element.id),
+            field: "text"
+          }, {
+            label: "Text block",
+            multiline: true,
+            rows: 4
+          });
         }
 
         if (type === "math") {
@@ -1652,7 +2405,16 @@
           image.alt = normalizeString(element.alt) || "Document image";
           figure.appendChild(image);
           if (normalizeString(element.caption)) {
-            figure.appendChild(createElement("figcaption", "", normalizeString(element.caption)));
+            figure.appendChild(createEditableTextNode("figcaption", "", normalizeString(element.caption), {
+              scope: "element",
+              pageIndex: pageIndex,
+              elementId: normalizeString(element.id),
+              field: "caption"
+            }, {
+              label: "Image caption",
+              multiline: true,
+              rows: 3
+            }));
           }
           return figure;
         }
@@ -1660,18 +2422,51 @@
         if (type === "button") {
           var buttonRow = createElement("div", "doc-button-row");
           var variantClass = normalizeString(element.variant) === "primary" ? " primary" : "";
-          var button = createButton(normalizeString(element.label) || "Run action", "button" + variantClass, function () {
-            executeAction(element.action, { element: element, pageIndex: pageIndex });
-          });
+          var button;
+          if (state.editorMode) {
+            button = createButton(normalizeString(element.label) || "Run action", "button editable-text editable-control" + variantClass, function (event) {
+              event.preventDefault();
+              startInlineEdit({
+                scope: "element",
+                pageIndex: pageIndex,
+                elementId: normalizeString(element.id),
+                field: "label"
+              }, normalizeString(element.label), {
+                label: "Button label",
+                multiline: false,
+                control: true
+              });
+            });
+          } else {
+            button = createButton(normalizeString(element.label) || "Run action", "button" + variantClass, function () {
+              executeAction(element.action, { element: element, pageIndex: pageIndex });
+            });
+          }
           buttonRow.appendChild(button);
           return buttonRow;
         }
 
         if (type === "link") {
+          var linkLabel = normalizeString(element.label) || normalizeString(element.href) || "Open link";
+          if (state.editorMode) {
+            return createEditableTextNode("a", "doc-link editable-control", linkLabel, {
+              scope: "element",
+              pageIndex: pageIndex,
+              elementId: normalizeString(element.id),
+              field: "label"
+            }, {
+              label: "Link label",
+              multiline: false,
+              control: true
+            }, function (node) {
+              node.href = "#";
+            });
+          }
+
           var link = document.createElement("a");
           link.className = "doc-link";
           link.href = "#";
-          link.textContent = normalizeString(element.label) || normalizeString(element.href) || "Open link";
+          link.textContent = linkLabel;
           link.addEventListener("click", function (event) {
             event.preventDefault();
             if (element.action) {
@@ -1691,12 +2486,27 @@
           var tone = normalizeCalloutTone(element.tone);
           var callout = createElement("aside", "doc-callout " + tone);
           if (normalizeString(element.title)) {
-            var calloutTitle = createElement("h3", "doc-callout-title");
-            setHighlightedText(calloutTitle, normalizeString(element.title));
+            var calloutTitle = createEditableTextNode("h3", "doc-callout-title", normalizeString(element.title), {
+              scope: "element",
+              pageIndex: pageIndex,
+              elementId: normalizeString(element.id),
+              field: "title"
+            }, {
+              label: "Callout title",
+              multiline: false
+            });
             callout.appendChild(calloutTitle);
           }
-          var calloutCopy = createElement("p", "doc-callout-copy");
-          setHighlightedText(calloutCopy, normalizeString(element.text));
+          var calloutCopy = createEditableTextNode("p", "doc-callout-copy", normalizeString(element.text), {
+            scope: "element",
+            pageIndex: pageIndex,
+            elementId: normalizeString(element.id),
+            field: "text"
+          }, {
+            label: "Callout text",
+            multiline: true,
+            rows: 4
+          });
           callout.appendChild(calloutCopy);
           return callout;
         }
@@ -1706,8 +2516,17 @@
           if (normalizeString(element.language)) {
             wrapper.appendChild(createElement("div", "doc-code-label", normalizeString(element.language)));
           }
-          var pre = createElement("pre", "doc-code");
-          setHighlightedText(pre, normalizeString(element.code));
+          var pre = createEditableTextNode("pre", "doc-code", normalizeString(element.code), {
+            scope: "element",
+            pageIndex: pageIndex,
+            elementId: normalizeString(element.id),
+            field: "code"
+          }, {
+            label: "Code block",
+            multiline: true,
+            rows: 8,
+            code: true
+          });
           wrapper.appendChild(pre);
           return wrapper;
         }
@@ -1720,12 +2539,27 @@
 
         if (type === "quote") {
           var quote = createElement("blockquote", "doc-quote");
-          var quoteContent = createElement("p", "doc-quote-content");
-          quoteContent.textContent = normalizeString(element.text);
+          var quoteContent = createEditableTextNode("p", "doc-quote-content", normalizeString(element.text), {
+            scope: "element",
+            pageIndex: pageIndex,
+            elementId: normalizeString(element.id),
+            field: "text"
+          }, {
+            label: "Quote text",
+            multiline: true,
+            rows: 4
+          });
           quote.appendChild(quoteContent);
           if (normalizeString(element.cite)) {
-            var cite = document.createElement("cite");
-            cite.textContent = normalizeString(element.cite);
+            var cite = createEditableTextNode("cite", "", normalizeString(element.cite), {
+              scope: "element",
+              pageIndex: pageIndex,
+              elementId: normalizeString(element.id),
+              field: "cite"
+            }, {
+              label: "Quote source",
+              multiline: false
+            });
             quote.appendChild(cite);
           }
           return quote;
@@ -1740,18 +2574,28 @@
           }
           items.forEach(function (item) {
             var li = document.createElement("li");
-            li.textContent = normalizeString(item);
+            li.appendChild(createEditableTextNode("span", "", normalizeString(item), {
+              scope: "element",
+              pageIndex: pageIndex,
+              elementId: normalizeString(element.id),
+              field: "items",
+              itemIndex: list.children.length
+            }, {
+              label: "List item",
+              multiline: true,
+              rows: 3
+            }));
             list.appendChild(li);
           });
           return list;
         }
 
         if (type === "question") {
-          return renderQuestion(element);
+          return renderQuestion(element, pageIndex);
         }
 
         if (type === "input") {
-          return renderInputElement(element);
+          return renderInputElement(element, pageIndex);
         }
 
         if (type === "pagebreak") {
@@ -1765,9 +2609,18 @@
         return renderWarningBlock("Unsupported element", "This element could not be rendered.");
       }
 
-      function renderQuestion(element) {
+      function renderQuestion(element, pageIndex) {
         var card = createElement("section", "question-card");
-        var prompt = createElement("p", "question-prompt", normalizeString(element.prompt) || "Untitled question");
+        var prompt = createEditableTextNode("p", "question-prompt", normalizeString(element.prompt) || "Untitled question", {
+          scope: "element",
+          pageIndex: pageIndex,
+          elementId: normalizeString(element.id),
+          field: "prompt"
+        }, {
+          label: "Question prompt",
+          multiline: true,
+          rows: 4
+        });
         card.appendChild(prompt);
 
         var questionId = normalizeString(element.id) || "question";
@@ -1780,12 +2633,25 @@
           radio.name = "question-" + questionId;
           radio.value = String(optionIndex);
           radio.checked = String(state.userAnswers[questionId]) === String(optionIndex);
-          radio.addEventListener("change", function () {
-            state.userAnswers[questionId] = optionIndex;
-            delete state.questionResults[questionId];
-            renderApp();
+          radio.disabled = state.editorMode;
+          if (!state.editorMode) {
+            radio.addEventListener("change", function () {
+              state.userAnswers[questionId] = optionIndex;
+              delete state.questionResults[questionId];
+              renderApp();
+            });
+          }
+          var copy = createEditableTextNode("span", "", normalizeString(optionText), {
+            scope: "element",
+            pageIndex: pageIndex,
+            elementId: normalizeString(element.id),
+            field: "options",
+            itemIndex: optionIndex
+          }, {
+            label: "Question option",
+            multiline: true,
+            rows: 3
           });
-          var copy = createElement("span", "", normalizeString(optionText));
           label.appendChild(radio);
           label.appendChild(copy);
           optionsWrap.appendChild(label);
@@ -1839,10 +2705,17 @@
         return null;
       }
 
-      function renderInputElement(element) {
+      function renderInputElement(element, pageIndex) {
         var card = createElement("section", "doc-input-card");
-        var label = document.createElement("label");
-        label.textContent = normalizeString(element.label) || "Input";
+        var label = createEditableTextNode("label", "", normalizeString(element.label) || "Input", {
+          scope: "element",
+          pageIndex: pageIndex,
+          elementId: normalizeString(element.id),
+          field: "label"
+        }, {
+          label: "Input label",
+          multiline: false
+        });
         var inputId = normalizeString(element.id) || "input-" + Math.random().toString(16).slice(2);
         label.setAttribute("for", inputId);
         card.appendChild(label);
@@ -1861,7 +2734,16 @@
         card.appendChild(input);
 
         if (normalizeString(element.helpText)) {
-          card.appendChild(createElement("p", "doc-input-help", normalizeString(element.helpText)));
+          card.appendChild(createEditableTextNode("p", "doc-input-help", normalizeString(element.helpText), {
+            scope: "element",
+            pageIndex: pageIndex,
+            elementId: normalizeString(element.id),
+            field: "helpText"
+          }, {
+            label: "Input help text",
+            multiline: true,
+            rows: 3
+          }));
         }
 
         return card;
@@ -2026,6 +2908,7 @@
         state.currentPage = nextIndex;
         persistPrefs();
         renderToolbar();
+        renderSidebar();
 
         var pageNode = refs.pageMap && refs.pageMap.get(nextIndex);
         if (pageNode) {
@@ -2059,15 +2942,21 @@
 
       function enterEditMode() {
         state.editorMode = true;
+        state.menuOpen = false;
         renderApp();
       }
 
       function exitEditMode() {
+        commitInlineEdit({ skipRender: true, silent: true });
         state.editorMode = false;
+        state.menuOpen = false;
         renderApp();
       }
 
       function saveDraft() {
+        if (state.inlineEditor) {
+          commitInlineEdit({ skipRender: true, silent: true });
+        }
         var text = getEditorText() || JSON.stringify(getActiveDocument(), null, 2);
         state.draftJSONText = text;
         try {
@@ -2101,6 +2990,9 @@
       }
 
       function exportJSON() {
+        if (state.inlineEditor) {
+          commitInlineEdit({ skipRender: true, silent: true });
+        }
         var doc = getActiveDocument();
         var text = JSON.stringify(doc, null, 2);
         var base = normalizeString(doc.meta.title).trim() || "idoc-document";
@@ -2110,6 +3002,7 @@
       }
 
       function resetToDemo() {
+        state.inlineEditor = null;
         state.draftJSONText = embeddedText;
         state.validationError = "";
         state.userAnswers = {};
@@ -2213,6 +3106,7 @@
 
       function applyDraftText(text, sourceLabel) {
         state.draftJSONText = typeof text === "string" ? text : "";
+        state.inlineEditor = null;
         var result = tryParseAndValidate(state.draftJSONText, sourceLabel);
         if (!result.ok) {
           state.validationError = result.errorMessage;
@@ -2279,6 +3173,7 @@
           state.currentPage = bestIndex;
           persistPrefs();
           renderToolbar();
+          renderSidebar();
         }
       }
 
@@ -2459,6 +3354,164 @@
         return createElement("span", "meta-pill", text);
       }
 
+      function createEditableTextNode(tagName, className, value, target, options, initializer) {
+        var settings = Object.assign({
+          label: "Text",
+          multiline: true,
+          rows: 4,
+          code: false,
+          compact: false,
+          control: false
+        }, options || {});
+
+        if (state.editorMode && state.inlineEditor && getInlineTargetKey(state.inlineEditor) === getInlineTargetKey(target)) {
+          return renderInlineEditor(target, value, settings);
+        }
+
+        var node = document.createElement(tagName);
+        if (className) {
+          node.className = className;
+        }
+        if (typeof initializer === "function") {
+          initializer(node);
+        }
+        setHighlightedText(node, normalizeString(value));
+
+        if (!state.editorMode) {
+          return node;
+        }
+
+        node.classList.add("editable-text");
+        if (settings.control) {
+          node.classList.add("editable-control");
+        }
+        if (!isNaturallyFocusable(node)) {
+          node.tabIndex = 0;
+        }
+        node.setAttribute("role", node.tagName === "A" ? "link" : "button");
+        node.setAttribute("aria-label", "Edit " + settings.label.toLowerCase());
+        node.addEventListener("click", function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          startInlineEdit(target, value, settings);
+        });
+        node.addEventListener("keydown", function (event) {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            startInlineEdit(target, value, settings);
+          }
+        });
+        return node;
+      }
+
+      function renderInlineEditor(target, value, options) {
+        var settings = Object.assign({
+          label: "Text",
+          multiline: true,
+          rows: 4,
+          code: false,
+          compact: false
+        }, options || {});
+
+        var root = createElement("div", "inline-editor" + (settings.compact ? " compact" : ""));
+        root.setAttribute("data-inline-editor-root", "true");
+
+        var label = createElement("div", "inline-editor-label", "Editing " + settings.label);
+        var control = document.createElement(settings.multiline ? "textarea" : "input");
+        control.id = getInlineEditorInputId(target);
+        control.className = "inline-editor-input" + (settings.code ? " code" : "");
+        if (!settings.multiline) {
+          control.type = "text";
+        } else {
+          control.rows = settings.rows || 4;
+        }
+        control.value = normalizeString(value);
+        control.addEventListener("keydown", function (event) {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            cancelInlineEdit();
+            return;
+          }
+
+          if (!settings.multiline && event.key === "Enter") {
+            event.preventDefault();
+            commitInlineEdit();
+            return;
+          }
+
+          if (settings.multiline && event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+            event.preventDefault();
+            commitInlineEdit();
+          }
+        });
+        control.addEventListener("blur", function (event) {
+          if (event.relatedTarget && event.relatedTarget.closest("[data-inline-editor-root]")) {
+            return;
+          }
+          commitInlineEdit();
+        });
+
+        var help = createElement("div", "inline-editor-help", settings.multiline ? "Ctrl/Cmd+Enter saves. Esc cancels. Clicking away also saves." : "Enter saves. Esc cancels. Clicking away also saves.");
+        var actions = createElement("div", "inline-editor-actions");
+        var cancelButton = createButton("Cancel", "button small ghost", function () {
+          cancelInlineEdit();
+        });
+        cancelButton.setAttribute("data-inline-action", "cancel");
+        var saveButton = createButton("Save", "button small primary", function () {
+          commitInlineEdit();
+        });
+        saveButton.setAttribute("data-inline-action", "save");
+
+        actions.appendChild(cancelButton);
+        actions.appendChild(saveButton);
+        root.appendChild(label);
+        root.appendChild(control);
+        root.appendChild(help);
+        root.appendChild(actions);
+        return root;
+      }
+
+      function createIconButton(label, iconName, className, onClick) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = className || "icon-button";
+        button.setAttribute("aria-label", label);
+        button.setAttribute("title", label);
+        button.appendChild(createIcon(iconName));
+        button.addEventListener("click", function (event) {
+          onClick(event);
+        });
+        return button;
+      }
+
+      function createIcon(iconName) {
+        var wrapper = createElement("span", "icon");
+        wrapper.innerHTML = getIconSvg(iconName);
+        return wrapper;
+      }
+
+      function getIconSvg(iconName) {
+        if (iconName === "menu") {
+          return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M4 12h16"></path><path d="M4 17h16"></path></svg>';
+        }
+        if (iconName === "more") {
+          return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none"></circle></svg>';
+        }
+        if (iconName === "draw") {
+          return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 16c2.4-4.8 5.2-7.2 8.2-7.2 2.7 0 2.6 3.7 5 3.7 1.7 0 3-1.4 4.8-4.5"></path><path d="M4 20h16"></path></svg>';
+        }
+        if (iconName === "search") {
+          return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>';
+        }
+        if (iconName === "chevron-left") {
+          return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5L8 12l6.5 6.5"></path></svg>';
+        }
+        if (iconName === "chevron-right") {
+          return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 5.5L16 12l-6.5 6.5"></path></svg>';
+        }
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle></svg>';
+      }
+
       function renderWarningBlock(title, copy) {
         var block = createElement("div", "doc-warning");
         block.appendChild(createElement("h3", "doc-warning-title", title));
@@ -2567,8 +3620,99 @@
         return textarea ? textarea.value : state.draftJSONText;
       }
 
+      function getInlineTargetKey(target) {
+        if (!target) {
+          return "";
+        }
+        return [
+          normalizeString(target.scope || "element"),
+          normalizeString(target.pageIndex),
+          normalizeString(target.elementId || "page"),
+          normalizeString(target.field),
+          target.itemIndex == null ? "" : normalizeString(target.itemIndex)
+        ].join(":");
+      }
+
+      function getInlineEditorInputId(target) {
+        return "inline-editor-" + getInlineTargetKey(target).replace(/[^a-z0-9_-]+/gi, "-");
+      }
+
+      function getInlineEditorValue(target) {
+        var control = document.getElementById(getInlineEditorInputId(target));
+        if (!control) {
+          return normalizeString(target && target.initialValue);
+        }
+        return control.value;
+      }
+
+      function focusInlineEditorControl() {
+        if (!state.inlineEditor) {
+          return;
+        }
+        var control = document.getElementById(getInlineEditorInputId(state.inlineEditor));
+        if (!control) {
+          return;
+        }
+        control.focus({ preventScroll: true });
+        if (typeof control.setSelectionRange === "function") {
+          var length = control.value.length;
+          control.setSelectionRange(length, length);
+        }
+      }
+
+      function applyInlineEditToDocument(doc, target, nextValue) {
+        if (!doc || !target) {
+          return false;
+        }
+
+        var page = doc.pages[target.pageIndex];
+        if (!page) {
+          return false;
+        }
+
+        if (normalizeString(target.scope) === "page") {
+          page[target.field] = nextValue;
+          return true;
+        }
+
+        var element = (page.elements || []).find(function (item) {
+          return normalizeString(item.id) === normalizeString(target.elementId);
+        });
+        if (!element) {
+          return false;
+        }
+
+        if (target.itemIndex != null) {
+          if (!Array.isArray(element[target.field])) {
+            return false;
+          }
+          element[target.field][target.itemIndex] = nextValue;
+          return true;
+        }
+
+        element[target.field] = nextValue;
+        return true;
+      }
+
+      function cloneDocument(doc) {
+        return JSON.parse(JSON.stringify(doc));
+      }
+
       function getActiveDocument() {
         return state.activeDocument || validateDocument(buildEmergencyDocument("No active document was available.")).document;
+      }
+
+      function getPagePreviewText(page) {
+        var preview = (page.elements || []).map(extractSearchText).find(function (text) {
+          return normalizeString(text).trim();
+        });
+        return truncateText(preview || "Open this page to inspect its interactive blocks.", 120);
+      }
+
+      function pageHasSearchHit(pageIndex) {
+        return state.searchResults.some(function (result) {
+          return result.pageIndex === pageIndex;
+        });
       }
 
       function getPageCount() {
@@ -2686,6 +3830,14 @@
         return "info";
       }
 
+      function truncateText(value, maxLength) {
+        var text = normalizeString(value).trim();
+        if (text.length <= maxLength) {
+          return text;
+        }
+        return text.slice(0, Math.max(0, maxLength - 3)).trimEnd() + "...";
+      }
+
       function clamp(value, min, max) {
         return Math.min(Math.max(value, min), max);
       }
@@ -2704,6 +3856,14 @@
 
       function isPlainObject(value) {
         return value != null && typeof value === "object" && !Array.isArray(value);
+      }
+
+      function isCompactLayout() {
+        return window.innerWidth <= 980;
+      }
+
+      function isNaturallyFocusable(node) {
+        return ["A", "BUTTON", "INPUT", "TEXTAREA", "SELECT"].indexOf(node.tagName) !== -1;
       }
 
       function setValueByPath(target, path, value) {
