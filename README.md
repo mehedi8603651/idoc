@@ -8,7 +8,7 @@ No build step is required.
 
 ### Option 1: Open the file directly
 
-1. Open [example.idoc.html](D:\idoc\example.idoc.html) in a modern browser.
+1. Open `example.idoc.html` in a modern browser.
 2. If file associations are set up, you can double-click it in Explorer.
 3. You can also drag the file into an existing browser window.
 
