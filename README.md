@@ -1,57 +1,47 @@
-# iDoc Prototype
+# iDoc
 
-`example.idoc.html` is a self-contained interactive document prototype.
+This repo now has two parts:
 
-## Run It
+- [example.idoc.html](/d:/idoc/example.idoc.html): generated browser runtime sample
+- [idoc](/d:/idoc/idoc): Flutter Windows authoring app
 
-No build step is required.
+## Workflow
 
-### Option 1: Open the file directly
+1. Run the Flutter app on Windows.
+2. Create or edit your document there.
+3. Export a standalone `.idoc.html` file.
+4. Open that exported file directly in a browser.
 
-1. Open `example.idoc.html` in a modern browser.
-2. If file associations are set up, you can double-click it in Explorer.
-3. You can also drag the file into an existing browser window.
+The HTML file is the reader/runtime only. The editing system now lives in Flutter.
 
-This is the intended default for the prototype.
+## Open The Sample
 
-### Option 2: Serve it locally
-
-Use this if your browser applies stricter `file://` rules, or if you want more predictable localStorage behavior.
-
-PowerShell with Python:
+Double-click [example.idoc.html](/d:/idoc/example.idoc.html) in Explorer, or serve the repo root locally:
 
 ```powershell
 cd D:\idoc
 python -m http.server 8000
 ```
 
-Then open:
+Then open `http://localhost:8000/example.idoc.html`.
 
-```text
-http://localhost:8000/example.idoc.html
+## Run The Editor
+
+```powershell
+cd D:\idoc\idoc
+flutter run -d windows
 ```
 
-## Requirements
+## What The Flutter App Does
 
-- Modern browser
-- Internet access for KaTeX and Google Fonts CDNs
-
-If the KaTeX CDN is unavailable, the document still works and shows math as plain text fallback.
-
-## What You Can Do
-
-- Read the embedded 3-page demo document
-- Navigate pages
-- Search and highlight matches
-- Toggle theme
-- Open popups
-- Answer the quiz block
-- Enter edit mode and modify the JSON
-- Save a draft to localStorage
-- Import JSON
-- Export JSON
+- visual page and block editing
+- metadata and action editing
+- raw JSON fallback editor
+- open existing `.json` or `.idoc.html`
+- save `.json`
+- export standalone `.idoc.html`
 
 ## Notes
 
-- Recommended filename: `example.idoc.html`
-- The original task asked for a single HTML deliverable only, so there was no `README.md` initially.
+- Current focus is Windows desktop authoring.
+- The exported runtime still supports navigation, search, theme switching, popups, questions, and JSON export.
