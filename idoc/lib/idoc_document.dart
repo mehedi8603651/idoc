@@ -197,17 +197,9 @@ Map<String, dynamic> createDefaultElement(String type) {
         'caption': '',
       };
     case 'button':
-      return <String, dynamic>{
-        'type': 'button',
-        'label': 'Run action',
-        'action': 'new-popup',
-      };
+      return <String, dynamic>{'type': 'button', 'label': 'Run action'};
     case 'link':
-      return <String, dynamic>{
-        'type': 'link',
-        'label': 'Open link',
-        'action': 'open-link',
-      };
+      return <String, dynamic>{'type': 'link', 'label': 'Open link'};
     case 'separator':
       return <String, dynamic>{'type': 'separator'};
     case 'callout':

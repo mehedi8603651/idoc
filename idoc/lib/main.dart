@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'idoc_document.dart';
 import 'idoc_exporter.dart';
 
+enum RibbonTab { home, insert }
+
 void main() {
   runApp(const IdocStudioApp());
 }
@@ -42,13 +44,26 @@ class IdocStudioHome extends StatefulWidget {
 }
 
 class _IdocStudioHomeState extends State<IdocStudioHome> {
+  static const List<String> _simpleBehaviorTypes = <String>[
+    'popup',
+    'gotoPage',
+    'openLink',
+    'toggleTheme',
+    'alert',
+    'showAnswer',
+    'saveDocument',
+    'exportDocument',
+  ];
+
   late IdocDocument _document;
   late IdocDocument _demoDocument;
   String _runtimeTemplate = '';
   bool _loading = true;
   int _selectedPageIndex = 0;
-  String? _selectedActionKey;
+  String? _selectedElementId;
+  RibbonTab _activeRibbonTab = RibbonTab.home;
   String _status = 'Loading assets...';
+  bool _slashMenuOpen = false;
 
   @override
   void initState() {
@@ -65,15 +80,17 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
       final demoDocument = IdocDocument.fromJson(
         extractDocumentJsonFromContent(results[1]),
       );
+      _normalizeDocumentForEditor(demoDocument);
       setState(() {
         _runtimeTemplate = results[0];
         _demoDocument = demoDocument.deepCopy();
         _document = demoDocument.deepCopy();
-        _selectedActionKey = _document.actions.isEmpty
-            ? null
-            : _document.actions.keys.first;
+        _selectedPageIndex = 0;
+        _selectedElementId = _currentPage.elements.isNotEmpty
+            ? _blockId(_currentPage.elements.first)
+            : null;
         _status =
-            'Ready. Edit visually here, then export a standalone .idoc.html runtime.';
+            'Ready. Write directly on the page canvas, use / to switch text blocks, and export a standalone .idoc.html runtime.';
         _loading = false;
       });
     } catch (error) {
@@ -109,15 +126,15 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
             Expanded(
               child: Row(
                 children: <Widget>[
-                  SizedBox(width: 280, child: _buildPageRail(context)),
+                  SizedBox(width: 270, child: _buildPageRail(context)),
                   const VerticalDivider(width: 1),
                   Expanded(child: _buildEditorCanvas(context)),
                   const VerticalDivider(width: 1),
-                  SizedBox(width: 360, child: _buildInspector(context)),
+                  SizedBox(width: 340, child: _buildInspector(context)),
                 ],
               ),
             ),
-            _buildStatusBar(context),
+            _buildStatusBar(),
           ],
         ),
       ),
@@ -128,7 +145,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     final theme = Theme.of(context);
     return Material(
       elevation: 2,
-      color: Colors.white.withValues(alpha: 0.78),
+      color: Colors.white.withValues(alpha: 0.82),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
         child: Column(
@@ -168,7 +185,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Windows authoring app. Exported HTML files stay viewer-only.',
+                        'Word-like authoring on the canvas, structured export under the hood.',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: const Color(0xFF5D6668),
                         ),
@@ -176,54 +193,161 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
                   children: <Widget>[
-                    FilledButton.tonalIcon(
-                      onPressed: _createNewDocument,
-                      icon: const Icon(Icons.note_add_outlined),
-                      label: const Text('New'),
-                    ),
-                    FilledButton.tonalIcon(
-                      onPressed: _openDocumentFile,
-                      icon: const Icon(Icons.folder_open_outlined),
-                      label: const Text('Open'),
-                    ),
-                    FilledButton.tonalIcon(
-                      onPressed: _saveJsonFile,
-                      icon: const Icon(Icons.data_object_outlined),
-                      label: const Text('Save JSON'),
-                    ),
-                    FilledButton.icon(
-                      onPressed: _exportHtmlFile,
-                      icon: const Icon(Icons.picture_as_pdf_outlined),
-                      label: const Text('Export .idoc.html'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _resetToDemo,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Reset demo'),
-                    ),
+                    _buildInfoChip('Document', _document.title),
+                    _buildInfoChip('Pages', _document.pages.length.toString()),
+                    _buildInfoChip('Export', suggestHtmlFilename(_document)),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
+            const SizedBox(height: 18),
+            Row(
               children: <Widget>[
-                _buildInfoChip('Title', _document.title),
-                _buildInfoChip('Filename', suggestHtmlFilename(_document)),
-                _buildInfoChip('Pages', _document.pages.length.toString()),
-                _buildInfoChip('Actions', _document.actions.length.toString()),
+                _buildRibbonTabChip('Home', RibbonTab.home),
+                const SizedBox(width: 10),
+                _buildRibbonTabChip('Insert', RibbonTab.insert),
               ],
+            ),
+            const SizedBox(height: 14),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: _activeRibbonTab == RibbonTab.home
+                  ? _buildHomeRibbon(context)
+                  : _buildInsertRibbon(context),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRibbonTabChip(String label, RibbonTab tab) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: _activeRibbonTab == tab,
+      onSelected: (_) {
+        setState(() {
+          _activeRibbonTab = tab;
+        });
+      },
+      selectedColor: const Color(0xFFDCF4EE),
+      labelStyle: TextStyle(
+        fontWeight: FontWeight.w700,
+        color: _activeRibbonTab == tab
+            ? const Color(0xFF0F766E)
+            : const Color(0xFF374547),
+      ),
+    );
+  }
+
+  Widget _buildHomeRibbon(BuildContext context) {
+    return Wrap(
+      key: const ValueKey<String>('home-ribbon'),
+      spacing: 10,
+      runSpacing: 10,
+      children: <Widget>[
+        FilledButton.tonalIcon(
+          onPressed: _createNewDocument,
+          icon: const Icon(Icons.note_add_outlined),
+          label: const Text('New document'),
+        ),
+        FilledButton.tonalIcon(
+          onPressed: _openDocumentFile,
+          icon: const Icon(Icons.folder_open_outlined),
+          label: const Text('Open'),
+        ),
+        FilledButton.tonalIcon(
+          onPressed: _saveJsonFile,
+          icon: const Icon(Icons.data_object_outlined),
+          label: const Text('Save JSON'),
+        ),
+        FilledButton.icon(
+          onPressed: _exportHtmlFile,
+          icon: const Icon(Icons.picture_as_pdf_outlined),
+          label: const Text('Export .idoc.html'),
+        ),
+        OutlinedButton.icon(
+          onPressed: _editRawJson,
+          icon: const Icon(Icons.code),
+          label: const Text('Raw JSON'),
+        ),
+        OutlinedButton.icon(
+          onPressed: _resetToDemo,
+          icon: const Icon(Icons.refresh),
+          label: const Text('Reset demo'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInsertRibbon(BuildContext context) {
+    return Wrap(
+      key: const ValueKey<String>('insert-ribbon'),
+      spacing: 10,
+      runSpacing: 10,
+      children: <Widget>[
+        _buildInsertTool(icon: Icons.title, label: 'Heading', type: 'heading'),
+        _buildInsertTool(
+          icon: Icons.notes,
+          label: 'Paragraph',
+          type: 'paragraph',
+        ),
+        _buildInsertTool(icon: Icons.text_fields, label: 'Text', type: 'text'),
+        _buildInsertTool(
+          icon: Icons.info_outline,
+          label: 'Callout',
+          type: 'callout',
+        ),
+        _buildInsertTool(
+          icon: Icons.smart_button_outlined,
+          label: 'Button',
+          type: 'button',
+        ),
+        _buildInsertTool(icon: Icons.link, label: 'Link', type: 'link'),
+        _buildInsertTool(icon: Icons.code, label: 'Code', type: 'code'),
+        _buildInsertTool(icon: Icons.functions, label: 'Math', type: 'math'),
+        _buildInsertTool(
+          icon: Icons.format_list_bulleted,
+          label: 'List',
+          type: 'list',
+        ),
+        _buildInsertTool(
+          icon: Icons.quiz_outlined,
+          label: 'Question',
+          type: 'question',
+        ),
+        _buildInsertTool(
+          icon: Icons.image_outlined,
+          label: 'Image',
+          type: 'image',
+        ),
+        _buildInsertTool(
+          icon: Icons.keyboard_outlined,
+          label: 'Input',
+          type: 'input',
+        ),
+        OutlinedButton.icon(
+          onPressed: _addPageAfterCurrent,
+          icon: const Icon(Icons.note_add_outlined),
+          label: const Text('New page'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInsertTool({
+    required IconData icon,
+    required String label,
+    required String type,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: () => _insertBlockAfterSelection(type),
+      icon: Icon(icon),
+      label: Text(label),
     );
   }
 
@@ -239,33 +363,10 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     );
   }
 
-  IdocPage get _currentPage {
-    if (_selectedPageIndex >= _document.pages.length) {
-      _selectedPageIndex = _document.pages.length - 1;
-    }
-    return _document.pages[_selectedPageIndex];
-  }
-
-  void _mutateDocument(String message, VoidCallback callback) {
-    setState(() {
-      callback();
-      if (_selectedPageIndex >= _document.pages.length) {
-        _selectedPageIndex = _document.pages.length - 1;
-      }
-      _status = message;
-    });
-  }
-
-  void _setStatus(String message) {
-    setState(() {
-      _status = message;
-    });
-  }
-
   Widget _buildPageRail(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      color: Colors.white.withValues(alpha: 0.64),
+      color: Colors.white.withValues(alpha: 0.66),
       padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,7 +390,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Select a page, then add or edit blocks in the center canvas.',
+            'Select a page. The center canvas behaves like the writing surface.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: const Color(0xFF5D6668),
             ),
@@ -306,6 +407,9 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                   onTap: () {
                     setState(() {
                       _selectedPageIndex = index;
+                      _selectedElementId = page.elements.isNotEmpty
+                          ? _blockId(page.elements.first)
+                          : null;
                     });
                   },
                   borderRadius: BorderRadius.circular(18),
@@ -352,7 +456,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         Text(
                           '${page.elements.length} blocks',
                           style: theme.textTheme.bodySmall?.copyWith(
@@ -402,141 +506,130 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     final page = _currentPage;
     return Container(
       color: const Color(0xFFF7F2E8),
-      child: Column(
+      child: ListView(
+        padding: const EdgeInsets.all(24),
         children: <Widget>[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(bottom: BorderSide(color: Color(0xFFE5DDCE))),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 920),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFE2D8C6)),
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        const Icon(Icons.tips_and_updates_outlined),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Write directly in the page. Type / in an empty heading, paragraph, or text block to switch block type.',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    padding: const EdgeInsets.all(28),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(color: const Color(0xFFE2D8C6)),
+                      boxShadow: const <BoxShadow>[
+                        BoxShadow(
+                          color: Color(0x12000000),
+                          blurRadius: 24,
+                          offset: Offset(0, 12),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Page ${_selectedPageIndex + 1}',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: const Color(0xFF5D6668),
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                        _buildInlineTextField(
+                          fieldKey: 'page-title-${page.id}',
+                          initialValue: page.title,
+                          onChanged: (String value) {
+                            _mutateDocument('Updated page title.', () {
+                              page.title = value;
+                            });
+                          },
+                          style: theme.textTheme.headlineLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1.3,
+                            height: 1.05,
+                          ),
+                          minLines: 1,
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 10),
+                        if (page.elements.isEmpty)
+                          OutlinedButton.icon(
+                            onPressed: () =>
+                                _insertBlockAfterSelection('paragraph'),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add first block'),
+                          )
+                        else
+                          ...page.elements.asMap().entries.map((
+                            MapEntry<int, Map<String, dynamic>> entry,
+                          ) {
+                            return _buildBlockCard(
+                              page: page,
+                              index: entry.key,
+                              element: entry.value,
+                            );
+                          }),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Page canvas',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Visual authoring happens here. Exported .idoc.html files keep the viewer only.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF5D6668),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  key: ValueKey<String>('page-title-${page.id}'),
-                  initialValue: page.title,
-                  decoration: const InputDecoration(
-                    labelText: 'Page title',
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (String value) {
-                    _mutateDocument('Updated page title.', () {
-                      page.title = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: <Widget>[
-                    PopupMenuButton<String>(
-                      tooltip: 'Add block',
-                      onSelected: _addBlockToCurrentPage,
-                      itemBuilder: (BuildContext context) {
-                        return kIdocElementTypes
-                            .map(
-                              (String type) => PopupMenuItem<String>(
-                                value: type,
-                                child: Text(_labelize(type)),
-                              ),
-                            )
-                            .toList();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Icon(Icons.add, color: Colors.white),
-                            SizedBox(width: 8),
-                            Text(
-                              'Add block',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _addPageAfterCurrent,
-                      icon: const Icon(Icons.note_add_outlined),
-                      label: const Text('New page after this'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _editRawJson,
-                      icon: const Icon(Icons.code),
-                      label: const Text('Advanced JSON'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: page.elements.isEmpty
-                ? Center(
-                    child: Text(
-                      'No blocks on this page yet. Use “Add block” to start.',
-                      style: theme.textTheme.titleMedium,
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(22),
-                    itemCount: page.elements.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final element = page.elements[index];
-                      return _buildElementCard(page, index, element);
-                    },
-                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildElementCard(
-    IdocPage page,
-    int index,
-    Map<String, dynamic> element,
-  ) {
-    final type = element['type']?.toString() ?? 'unknown';
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        side: const BorderSide(color: Color(0xFFE4DAC7)),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Padding(
+  Widget _buildBlockCard({
+    required IdocPage page,
+    required int index,
+    required Map<String, dynamic> element,
+  }) {
+    final type = _elementType(element);
+    final selected = _isSelected(element);
+    final theme = Theme.of(context);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => _selectElement(element),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(top: 18),
         padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFEEF8F6) : const Color(0xFFFFFCF7),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: selected ? const Color(0xFF0F766E) : const Color(0xFFE4DAC7),
+            width: selected ? 1.6 : 1,
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -551,11 +644,28 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                     color: const Color(0xFFF6F0E4),
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: Text(_labelize(type)),
+                  child: Text(
+                    _labelize(type),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ),
                 const SizedBox(width: 10),
-                Text('Block ${index + 1}'),
+                Text(
+                  'Block ${index + 1}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF5D6668),
+                  ),
+                ),
                 const Spacer(),
+                if (selected)
+                  Text(
+                    'Selected',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: const Color(0xFF0F766E),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                const SizedBox(width: 6),
                 IconButton(
                   tooltip: 'Move block up',
                   onPressed: index > 0
@@ -582,27 +692,760 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            ..._buildFieldEditors(
-              data: element,
-              hiddenKeys: const <String>{'type'},
-              fieldPrefix: 'page-${page.id}-block-$index',
-              onChanged: (String key, dynamic value) {
-                _mutateDocument('Updated ${_labelize(type)} block.', () {
-                  element[key] = value;
-                });
-              },
-            ),
+            const SizedBox(height: 14),
+            _buildCanvasElementEditor(page, index, element),
+            if (_isBehaviorElement(element)) ...<Widget>[
+              const SizedBox(height: 12),
+              Text(
+                'Configure what this ${type == 'button' ? 'button' : 'link'} does in the Behavior panel on the right.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF5D6668),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
+  Widget _buildCanvasElementEditor(
+    IdocPage page,
+    int index,
+    Map<String, dynamic> element,
+  ) {
+    switch (_elementType(element)) {
+      case 'heading':
+        return _buildInlineTextField(
+          fieldKey: '${_blockId(element)}-heading',
+          initialValue: _textValue(element['text']),
+          onChanged: (String value) {
+            _updateElementField(element, 'text', value, 'Updated heading.');
+            _maybeOpenSlashMenu(
+              page: page,
+              index: index,
+              element: element,
+              value: value,
+            );
+          },
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.6,
+          ),
+          minLines: 1,
+          maxLines: 4,
+        );
+      case 'paragraph':
+      case 'text':
+        return _buildInlineTextField(
+          fieldKey: '${_blockId(element)}-text',
+          initialValue: _textValue(element['text']),
+          onChanged: (String value) {
+            _updateElementField(
+              element,
+              'text',
+              value,
+              'Updated ${_labelize(_elementType(element)).toLowerCase()}.',
+            );
+            _maybeOpenSlashMenu(
+              page: page,
+              index: index,
+              element: element,
+              value: value,
+            );
+          },
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.7),
+          minLines: 2,
+          maxLines: 8,
+        );
+      case 'callout':
+        return _buildCalloutEditor(element);
+      case 'code':
+        return _buildCodeEditor(element);
+      case 'quote':
+        return _buildQuoteEditor(element);
+      case 'list':
+        return _buildListEditor(element);
+      case 'question':
+        return _buildQuestionEditor(element);
+      case 'input':
+        return _buildInputEditor(element);
+      case 'math':
+        return _buildMathEditor(element);
+      case 'image':
+        return _buildImageEditor(element);
+      case 'button':
+      case 'link':
+        return _buildButtonLikeEditor(element);
+      case 'separator':
+        return const Divider(height: 24);
+      case 'spacer':
+        return _buildSpacerEditor(element);
+      case 'pagebreak':
+        return const Text(
+          'Page break marker. The exported runtime will show this as a marker block.',
+        );
+      default:
+        return Text(
+          'Unsupported block type. You can still fix it in Raw JSON.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        );
+    }
+  }
+
+  Widget _buildInlineTextField({
+    required String fieldKey,
+    required String initialValue,
+    required ValueChanged<String> onChanged,
+    TextStyle? style,
+    int minLines = 1,
+    int maxLines = 1,
+  }) {
+    return TextFormField(
+      key: ValueKey<String>(fieldKey),
+      initialValue: initialValue,
+      minLines: minLines,
+      maxLines: maxLines,
+      style: style,
+      decoration: const InputDecoration(
+        border: InputBorder.none,
+        isDense: true,
+        contentPadding: EdgeInsets.zero,
+      ),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildCalloutEditor(Map<String, dynamic> element) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: _toneBackground(_textValue(element['tone'], fallback: 'info')),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _buildInlineTextField(
+                  fieldKey: '${_blockId(element)}-callout-title',
+                  initialValue: _textValue(element['title']),
+                  onChanged: (String value) => _updateElementField(
+                    element,
+                    'title',
+                    value,
+                    'Updated callout title.',
+                  ),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 140,
+                child: DropdownButtonFormField<String>(
+                  initialValue: _textValue(element['tone'], fallback: 'info'),
+                  decoration: const InputDecoration(
+                    labelText: 'Tone',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const <DropdownMenuItem<String>>[
+                    DropdownMenuItem<String>(
+                      value: 'info',
+                      child: Text('Info'),
+                    ),
+                    DropdownMenuItem<String>(
+                      value: 'success',
+                      child: Text('Success'),
+                    ),
+                    DropdownMenuItem<String>(
+                      value: 'warning',
+                      child: Text('Warning'),
+                    ),
+                  ],
+                  onChanged: (String? value) {
+                    if (value != null) {
+                      _updateElementField(
+                        element,
+                        'tone',
+                        value,
+                        'Updated callout tone.',
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildInlineTextField(
+            fieldKey: '${_blockId(element)}-callout-text',
+            initialValue: _textValue(element['text']),
+            onChanged: (String value) => _updateElementField(
+              element,
+              'text',
+              value,
+              'Updated callout text.',
+            ),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.7),
+            minLines: 2,
+            maxLines: 6,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCodeEditor(Map<String, dynamic> element) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161D1F),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          SizedBox(
+            width: 140,
+            child: TextFormField(
+              key: ValueKey<String>('${_blockId(element)}-language'),
+              initialValue: _textValue(element['language'], fallback: 'js'),
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Language',
+                labelStyle: TextStyle(color: Colors.white70),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white24),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white54),
+                ),
+              ),
+              onChanged: (String value) => _updateElementField(
+                element,
+                'language',
+                value,
+                'Updated code language.',
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            key: ValueKey<String>('${_blockId(element)}-code'),
+            initialValue: _textValue(element['code']),
+            minLines: 6,
+            maxLines: 12,
+            style: const TextStyle(
+              color: Color(0xFFF1F7F6),
+              fontFamily: 'Consolas',
+              height: 1.5,
+            ),
+            decoration: const InputDecoration(
+              border: InputBorder.none,
+              hintText: 'Write code here',
+              hintStyle: TextStyle(color: Colors.white38),
+            ),
+            onChanged: (String value) => _updateElementField(
+              element,
+              'code',
+              value,
+              'Updated code block.',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuoteEditor(Map<String, dynamic> element) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: const BoxDecoration(
+            border: Border(
+              left: BorderSide(color: Color(0xFF0F766E), width: 3),
+            ),
+          ),
+          child: _buildInlineTextField(
+            fieldKey: '${_blockId(element)}-quote-text',
+            initialValue: _textValue(element['text']),
+            onChanged: (String value) =>
+                _updateElementField(element, 'text', value, 'Updated quote.'),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontStyle: FontStyle.italic,
+              height: 1.6,
+            ),
+            minLines: 2,
+            maxLines: 5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildInlineTextField(
+          fieldKey: '${_blockId(element)}-quote-cite',
+          initialValue: _textValue(element['cite']),
+          onChanged: (String value) => _updateElementField(
+            element,
+            'cite',
+            value,
+            'Updated quote source.',
+          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5D6668)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListEditor(Map<String, dynamic> element) {
+    final items = _stringList(element['items']);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SwitchListTile.adaptive(
+          value: element['ordered'] == true,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Ordered list'),
+          onChanged: (bool value) => _updateElementField(
+            element,
+            'ordered',
+            value,
+            'Updated list style.',
+          ),
+        ),
+        ...items.asMap().entries.map((MapEntry<int, String> entry) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  element['ordered'] == true
+                      ? Icons.format_list_numbered
+                      : Icons.fiber_manual_record,
+                  size: 16,
+                  color: const Color(0xFF5D6668),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildInlineTextField(
+                    fieldKey: '${_blockId(element)}-item-${entry.key}',
+                    initialValue: entry.value,
+                    onChanged: (String value) {
+                      final nextItems = List<String>.from(items);
+                      nextItems[entry.key] = value;
+                      _updateElementField(
+                        element,
+                        'items',
+                        nextItems,
+                        'Updated list item.',
+                      );
+                    },
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(height: 1.7),
+                    minLines: 1,
+                    maxLines: 4,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    final nextItems = List<String>.from(items)
+                      ..removeAt(entry.key);
+                    _updateElementField(
+                      element,
+                      'items',
+                      nextItems,
+                      'Removed list item.',
+                    );
+                  },
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+              ],
+            ),
+          );
+        }),
+        OutlinedButton.icon(
+          onPressed: () {
+            final nextItems = List<String>.from(items)..add('New item');
+            _updateElementField(
+              element,
+              'items',
+              nextItems,
+              'Added list item.',
+            );
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('Add item'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuestionEditor(Map<String, dynamic> element) {
+    final options = _stringList(element['options']);
+    final answer = _numberValue(element['answer']);
+    final selectedAnswer = options.isEmpty
+        ? null
+        : answer.clamp(0, options.length - 1);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _buildInlineTextField(
+          fieldKey: '${_blockId(element)}-prompt',
+          initialValue: _textValue(element['prompt']),
+          onChanged: (String value) => _updateElementField(
+            element,
+            'prompt',
+            value,
+            'Updated question prompt.',
+          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          minLines: 2,
+          maxLines: 5,
+        ),
+        const SizedBox(height: 12),
+        ...options.asMap().entries.map((MapEntry<int, String> entry) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextFormField(
+                    key: ValueKey<String>(
+                      '${_blockId(element)}-option-${entry.key}',
+                    ),
+                    initialValue: entry.value,
+                    minLines: 1,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Option ${entry.key + 1}',
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (String value) {
+                      final nextOptions = List<String>.from(options);
+                      nextOptions[entry.key] = value;
+                      _updateElementField(
+                        element,
+                        'options',
+                        nextOptions,
+                        'Updated question option.',
+                      );
+                    },
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    final nextOptions = List<String>.from(options)
+                      ..removeAt(entry.key);
+                    var nextAnswer = selectedAnswer ?? 0;
+                    if (nextAnswer >= nextOptions.length) {
+                      nextAnswer = nextOptions.isEmpty
+                          ? 0
+                          : nextOptions.length - 1;
+                    }
+                    _mutateDocument('Removed question option.', () {
+                      element['options'] = nextOptions;
+                      element['answer'] = nextAnswer;
+                    });
+                  },
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+              ],
+            ),
+          );
+        }),
+        OutlinedButton.icon(
+          onPressed: () {
+            final nextOptions = List<String>.from(options)..add('New option');
+            _updateElementField(
+              element,
+              'options',
+              nextOptions,
+              'Added question option.',
+            );
+          },
+          icon: const Icon(Icons.add),
+          label: const Text('Add option'),
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<int>(
+          initialValue: selectedAnswer,
+          decoration: const InputDecoration(
+            labelText: 'Correct answer',
+            border: OutlineInputBorder(),
+          ),
+          items: options
+              .asMap()
+              .entries
+              .map(
+                (MapEntry<int, String> entry) => DropdownMenuItem<int>(
+                  value: entry.key,
+                  child: Text('Option ${entry.key + 1}'),
+                ),
+              )
+              .toList(),
+          onChanged: options.isEmpty
+              ? null
+              : (int? value) {
+                  if (value != null) {
+                    _updateElementField(
+                      element,
+                      'answer',
+                      value,
+                      'Updated correct answer.',
+                    );
+                  }
+                },
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          key: ValueKey<String>('${_blockId(element)}-explanation'),
+          initialValue: _textValue(element['explanation']),
+          minLines: 2,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            labelText: 'Explanation',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (String value) => _updateElementField(
+            element,
+            'explanation',
+            value,
+            'Updated answer explanation.',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInputEditor(Map<String, dynamic> element) {
+    return Column(
+      children: <Widget>[
+        TextFormField(
+          key: ValueKey<String>('${_blockId(element)}-input-label'),
+          initialValue: _textValue(element['label']),
+          decoration: const InputDecoration(
+            labelText: 'Label',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (String value) => _updateElementField(
+            element,
+            'label',
+            value,
+            'Updated input label.',
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          key: ValueKey<String>('${_blockId(element)}-input-placeholder'),
+          initialValue: _textValue(element['placeholder']),
+          decoration: const InputDecoration(
+            labelText: 'Placeholder',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (String value) => _updateElementField(
+            element,
+            'placeholder',
+            value,
+            'Updated input placeholder.',
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          key: ValueKey<String>('${_blockId(element)}-input-help'),
+          initialValue: _textValue(element['helpText']),
+          minLines: 1,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'Help text',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (String value) => _updateElementField(
+            element,
+            'helpText',
+            value,
+            'Updated input helper text.',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMathEditor(Map<String, dynamic> element) {
+    return Column(
+      children: <Widget>[
+        TextFormField(
+          key: ValueKey<String>('${_blockId(element)}-math-tex'),
+          initialValue: _textValue(element['tex']),
+          minLines: 2,
+          maxLines: 6,
+          style: const TextStyle(fontFamily: 'Consolas'),
+          decoration: const InputDecoration(
+            labelText: 'TeX',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (String value) =>
+              _updateElementField(element, 'tex', value, 'Updated math block.'),
+        ),
+        const SizedBox(height: 8),
+        SwitchListTile.adaptive(
+          value: element['displayMode'] == true,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Display mode'),
+          onChanged: (bool value) => _updateElementField(
+            element,
+            'displayMode',
+            value,
+            'Updated math display mode.',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImageEditor(Map<String, dynamic> element) {
+    return Column(
+      children: <Widget>[
+        Container(
+          width: double.infinity,
+          height: 140,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            color: const Color(0xFFF6F0E4),
+          ),
+          alignment: Alignment.center,
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(Icons.image_outlined, size: 36),
+              SizedBox(height: 8),
+              Text('Image preview placeholder'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          key: ValueKey<String>('${_blockId(element)}-image-src'),
+          initialValue: _textValue(element['src']),
+          minLines: 1,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'Source URL or data URI',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (String value) => _updateElementField(
+            element,
+            'src',
+            value,
+            'Updated image source.',
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          key: ValueKey<String>('${_blockId(element)}-image-alt'),
+          initialValue: _textValue(element['alt']),
+          decoration: const InputDecoration(
+            labelText: 'Alt text',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (String value) => _updateElementField(
+            element,
+            'alt',
+            value,
+            'Updated image alt text.',
+          ),
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          key: ValueKey<String>('${_blockId(element)}-image-caption'),
+          initialValue: _textValue(element['caption']),
+          minLines: 1,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'Caption',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (String value) => _updateElementField(
+            element,
+            'caption',
+            value,
+            'Updated image caption.',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildButtonLikeEditor(Map<String, dynamic> element) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: const Color(0xFFF6F0E4),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(
+            _elementType(element) == 'button'
+                ? Icons.smart_button_outlined
+                : Icons.link,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildInlineTextField(
+              fieldKey: '${_blockId(element)}-label',
+              initialValue: _textValue(element['label']),
+              onChanged: (String value) => _updateElementField(
+                element,
+                'label',
+                value,
+                'Updated block label.',
+              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpacerEditor(Map<String, dynamic> element) {
+    final currentSize = _numberValue(element['size'], fallback: 24).toDouble();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Slider(
+          value: currentSize.clamp(4, 96),
+          min: 4,
+          max: 96,
+          divisions: 23,
+          label: currentSize.round().toString(),
+          onChanged: (double value) => _updateElementField(
+            element,
+            'size',
+            value.round(),
+            'Updated spacer size.',
+          ),
+        ),
+        Text('Current height: ${currentSize.round()} px'),
+      ],
+    );
+  }
+
   Widget _buildInspector(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      color: Colors.white.withValues(alpha: 0.72),
+      color: Colors.white.withValues(alpha: 0.76),
       padding: const EdgeInsets.all(18),
       child: ListView(
         children: <Widget>[
@@ -614,137 +1457,105 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Document metadata, actions, and advanced JSON stay in this panel.',
+            'The page canvas is the main editor. This panel keeps document settings, button/link behavior, and raw JSON.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: const Color(0xFF5D6668),
             ),
           ),
-          const SizedBox(height: 18),
-          _buildInspectorSection(
-            context,
-            title: 'Metadata',
+          const SizedBox(height: 16),
+          _buildPanel(
+            title: 'Document',
             child: Column(
-              children: _buildFieldEditors(
-                data: _document.meta,
-                fieldPrefix: 'meta',
-                preferredOrder: const <String>[
-                  'title',
-                  'author',
-                  'version',
-                  'theme',
-                  'recommendedFilename',
-                ],
-                onChanged: (String key, dynamic value) {
-                  _mutateDocument('Updated document metadata.', () {
-                    _document.meta[key] = value;
-                  });
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildInspectorSection(
-            context,
-            title: 'Actions',
-            headerAction: PopupMenuButton<String>(
-              onSelected: _addAction,
-              itemBuilder: (BuildContext context) {
-                return kIdocActionTypes
-                    .map(
-                      (String type) => PopupMenuItem<String>(
-                        value: type,
-                        child: Text(_labelize(type)),
-                      ),
-                    )
-                    .toList();
-              },
-              child: const Icon(Icons.add_circle_outline),
-            ),
-            child: _document.actions.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Text(
-                      'No actions yet. Add navigation, popup, and export actions here.',
-                    ),
-                  )
-                : Column(
-                    children: _document.actions.entries.map((
-                      MapEntry<String, dynamic> entry,
-                    ) {
-                      final actionData = entry.value is Map<String, dynamic>
-                          ? entry.value as Map<String, dynamic>
-                          : <String, dynamic>{'type': entry.value.toString()};
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 0,
-                        color: _selectedActionKey == entry.key
-                            ? const Color(0xFFEEF8F6)
-                            : const Color(0xFFFFFCF7),
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(
-                            color: _selectedActionKey == entry.key
-                                ? const Color(0xFF0F766E)
-                                : const Color(0xFFE4DAC7),
-                          ),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(18),
-                          onTap: () {
-                            setState(() {
-                              _selectedActionKey = entry.key;
-                            });
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Row(
-                                  children: <Widget>[
-                                    Expanded(
-                                      child: Text(
-                                        entry.key,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      onPressed: () => _renameAction(entry.key),
-                                      icon: const Icon(Icons.edit_outlined),
-                                    ),
-                                    IconButton(
-                                      onPressed: () => _removeAction(entry.key),
-                                      icon: const Icon(Icons.delete_outline),
-                                    ),
-                                  ],
-                                ),
-                                ..._buildFieldEditors(
-                                  data: actionData,
-                                  fieldPrefix: 'action-${entry.key}',
-                                  onChanged: (String key, dynamic value) {
-                                    _mutateDocument(
-                                      'Updated action ${entry.key}.',
-                                      () {
-                                        actionData[key] = value;
-                                        _document.actions[entry.key] =
-                                            actionData;
-                                      },
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+              children: <Widget>[
+                TextFormField(
+                  key: const ValueKey<String>('meta-title'),
+                  initialValue: _textValue(_document.meta['title']),
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    border: OutlineInputBorder(),
                   ),
+                  onChanged: (String value) => _mutateDocument(
+                    'Updated document title.',
+                    () => _document.meta['title'] = value,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  key: const ValueKey<String>('meta-author'),
+                  initialValue: _textValue(_document.meta['author']),
+                  decoration: const InputDecoration(
+                    labelText: 'Author',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (String value) => _mutateDocument(
+                    'Updated author.',
+                    () => _document.meta['author'] = value,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  key: const ValueKey<String>('meta-version'),
+                  initialValue: _textValue(_document.meta['version']),
+                  decoration: const InputDecoration(
+                    labelText: 'Version',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (String value) => _mutateDocument(
+                    'Updated version.',
+                    () => _document.meta['version'] = value,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  initialValue: _textValue(
+                    _document.meta['theme'],
+                    fallback: 'light',
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Default theme',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const <DropdownMenuItem<String>>[
+                    DropdownMenuItem<String>(
+                      value: 'light',
+                      child: Text('Light'),
+                    ),
+                    DropdownMenuItem<String>(
+                      value: 'dark',
+                      child: Text('Dark'),
+                    ),
+                  ],
+                  onChanged: (String? value) {
+                    if (value != null) {
+                      _mutateDocument(
+                        'Updated default theme.',
+                        () => _document.meta['theme'] = value,
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  key: const ValueKey<String>('meta-filename'),
+                  initialValue: _textValue(
+                    _document.meta['recommendedFilename'],
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Recommended filename',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (String value) => _mutateDocument(
+                    'Updated recommended filename.',
+                    () => _document.meta['recommendedFilename'] = value,
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
-          _buildInspectorSection(
-            context,
+          _buildPanel(title: 'Behavior', child: _buildBehaviorPanel()),
+          const SizedBox(height: 16),
+          _buildPanel(
             title: 'Raw JSON',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -796,13 +1607,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     );
   }
 
-  Widget _buildInspectorSection(
-    BuildContext context, {
-    required String title,
-    required Widget child,
-    Widget? headerAction,
-  }) {
-    final theme = Theme.of(context);
+  Widget _buildPanel({required String title, required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -813,19 +1618,11 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              // ignore: use_null_aware_elements
-              if (headerAction != null) headerAction,
-            ],
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 14),
           child,
@@ -834,7 +1631,197 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     );
   }
 
-  Widget _buildStatusBar(BuildContext context) {
+  Widget _buildBehaviorPanel() {
+    final element = _selectedElement;
+    if (element == null) {
+      return const Text(
+        'Select a block on the page. Buttons and links show behavior controls here.',
+      );
+    }
+    if (!_isBehaviorElement(element)) {
+      return Text(
+        '${_labelize(_elementType(element))} blocks are edited directly on the page canvas. Raw JSON is still available below for advanced changes.',
+      );
+    }
+
+    final action = _ensureBehaviorAction(element);
+    final actionType = _textValue(
+      action['type'],
+      fallback: _defaultBehaviorTypeForElement(element),
+    );
+    final questionTargets = _questionTargets();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          '${_labelize(_elementType(element))} behavior',
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Action IDs stay hidden. Pick the behavior you want and the editor manages the internal action map.',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: const Color(0xFF5D6668)),
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          initialValue: actionType,
+          decoration: const InputDecoration(
+            labelText: 'Behavior',
+            border: OutlineInputBorder(),
+          ),
+          items: _simpleBehaviorTypes
+              .map(
+                (String type) => DropdownMenuItem<String>(
+                  value: type,
+                  child: Text(_labelize(type)),
+                ),
+              )
+              .toList(),
+          onChanged: (String? value) {
+            if (value != null) {
+              _setBehaviorType(element, value);
+            }
+          },
+        ),
+        if (actionType == 'popup' || actionType == 'alert') ...<Widget>[
+          const SizedBox(height: 10),
+          TextFormField(
+            key: ValueKey<String>('${_blockId(element)}-behavior-title'),
+            initialValue: _textValue(action['title']),
+            decoration: const InputDecoration(
+              labelText: 'Title',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (String value) => _updateBehaviorField(
+              element,
+              'title',
+              value,
+              'Updated behavior title.',
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            key: ValueKey<String>('${_blockId(element)}-behavior-content'),
+            initialValue: _textValue(action['content']),
+            minLines: 2,
+            maxLines: 5,
+            decoration: const InputDecoration(
+              labelText: 'Content',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (String value) => _updateBehaviorField(
+              element,
+              'content',
+              value,
+              'Updated behavior content.',
+            ),
+          ),
+        ],
+        if (actionType == 'gotoPage') ...<Widget>[
+          const SizedBox(height: 10),
+          DropdownButtonFormField<int>(
+            initialValue: _numberValue(
+              action['page'],
+              fallback: 0,
+            ).clamp(0, _document.pages.length - 1),
+            decoration: const InputDecoration(
+              labelText: 'Target page',
+              border: OutlineInputBorder(),
+            ),
+            items: _document.pages
+                .asMap()
+                .entries
+                .map(
+                  (MapEntry<int, IdocPage> entry) => DropdownMenuItem<int>(
+                    value: entry.key,
+                    child: Text('Page ${entry.key + 1}: ${entry.value.title}'),
+                  ),
+                )
+                .toList(),
+            onChanged: (int? value) {
+              if (value != null) {
+                _updateBehaviorField(
+                  element,
+                  'page',
+                  value,
+                  'Updated target page.',
+                );
+              }
+            },
+          ),
+        ],
+        if (actionType == 'openLink') ...<Widget>[
+          const SizedBox(height: 10),
+          TextFormField(
+            key: ValueKey<String>('${_blockId(element)}-behavior-url'),
+            initialValue: _textValue(action['url']),
+            decoration: const InputDecoration(
+              labelText: 'URL',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (String value) => _updateBehaviorField(
+              element,
+              'url',
+              value,
+              'Updated link URL.',
+            ),
+          ),
+        ],
+        if (actionType == 'showAnswer') ...<Widget>[
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            initialValue: _textValue(action['target']),
+            decoration: const InputDecoration(
+              labelText: 'Target question',
+              border: OutlineInputBorder(),
+            ),
+            items: questionTargets
+                .map(
+                  (QuestionTarget target) => DropdownMenuItem<String>(
+                    value: target.id,
+                    child: Text(target.label),
+                  ),
+                )
+                .toList(),
+            onChanged: questionTargets.isEmpty
+                ? null
+                : (String? value) {
+                    if (value != null) {
+                      _updateBehaviorField(
+                        element,
+                        'target',
+                        value,
+                        'Updated answer target.',
+                      );
+                    }
+                  },
+          ),
+          if (questionTargets.isEmpty) ...<Widget>[
+            const SizedBox(height: 8),
+            const Text(
+              'Add a question block first, then you can target it here.',
+            ),
+          ],
+        ],
+        if (actionType == 'toggleTheme' ||
+            actionType == 'saveDocument' ||
+            actionType == 'exportDocument') ...<Widget>[
+          const SizedBox(height: 10),
+          Text(
+            'No extra settings are needed for this behavior.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildStatusBar() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -846,290 +1833,190 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     );
   }
 
-  List<Widget> _buildFieldEditors({
-    required Map<String, dynamic> data,
-    required String fieldPrefix,
-    required void Function(String key, dynamic value) onChanged,
-    List<String> preferredOrder = const <String>[],
-    Set<String> hiddenKeys = const <String>{},
-  }) {
-    final visibleKeys = data.keys
-        .where((String key) => !hiddenKeys.contains(key))
-        .toList(growable: true);
-    visibleKeys.sort((String a, String b) {
-      final aIndex = preferredOrder.indexOf(a);
-      final bIndex = preferredOrder.indexOf(b);
-      if (aIndex == -1 && bIndex == -1) {
-        return a.compareTo(b);
+  IdocPage get _currentPage {
+    if (_selectedPageIndex >= _document.pages.length) {
+      _selectedPageIndex = _document.pages.length - 1;
+    }
+    return _document.pages[_selectedPageIndex];
+  }
+
+  Map<String, dynamic>? get _selectedElement {
+    if (_selectedElementId == null) {
+      return null;
+    }
+    for (final Map<String, dynamic> element in _currentPage.elements) {
+      if (_blockId(element) == _selectedElementId) {
+        return element;
       }
-      if (aIndex == -1) {
-        return 1;
+    }
+    return null;
+  }
+
+  int? get _selectedElementIndex {
+    if (_selectedElementId == null) {
+      return null;
+    }
+    for (var index = 0; index < _currentPage.elements.length; index += 1) {
+      if (_blockId(_currentPage.elements[index]) == _selectedElementId) {
+        return index;
       }
-      if (bIndex == -1) {
-        return -1;
-      }
-      return aIndex.compareTo(bIndex);
+    }
+    return null;
+  }
+
+  bool _isSelected(Map<String, dynamic> element) {
+    return _selectedElementId != null &&
+        _blockId(element) == _selectedElementId;
+  }
+
+  void _selectElement(Map<String, dynamic> element) {
+    setState(() {
+      _selectedElementId = _blockId(element);
     });
-
-    return visibleKeys
-        .map(
-          (String key) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildFieldEditor(
-              label: key,
-              value: data[key],
-              fieldId: '$fieldPrefix-$key',
-              onChanged: (dynamic value) => onChanged(key, value),
-            ),
-          ),
-        )
-        .toList();
   }
 
-  Widget _buildFieldEditor({
-    required String label,
-    required dynamic value,
-    required String fieldId,
-    required ValueChanged<dynamic> onChanged,
-  }) {
-    final normalizedLabel = _labelize(label);
-    if (label == 'theme') {
-      final selectedValue = value?.toString() == 'dark' ? 'dark' : 'light';
-      return DropdownButtonFormField<String>(
-        key: ValueKey<String>(fieldId),
-        initialValue: selectedValue,
-        decoration: InputDecoration(
-          labelText: normalizedLabel,
-          border: const OutlineInputBorder(),
-        ),
-        items: const <DropdownMenuItem<String>>[
-          DropdownMenuItem<String>(value: 'light', child: Text('Light')),
-          DropdownMenuItem<String>(value: 'dark', child: Text('Dark')),
-        ],
-        onChanged: (String? nextValue) {
-          if (nextValue != null) {
-            onChanged(nextValue);
-          }
-        },
-      );
-    }
-    if (value is bool) {
-      return SwitchListTile.adaptive(
-        value: value,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-        title: Text(normalizedLabel),
-        onChanged: onChanged,
-      );
-    }
-    if (value is num) {
-      return TextFormField(
-        key: ValueKey<String>(fieldId),
-        initialValue: value.toString(),
-        keyboardType: const TextInputType.numberWithOptions(),
-        decoration: InputDecoration(
-          labelText: normalizedLabel,
-          border: const OutlineInputBorder(),
-        ),
-        onChanged: (String nextValue) {
-          final parsed = int.tryParse(nextValue);
-          if (parsed != null) {
-            onChanged(parsed);
-          }
-        },
-      );
-    }
-    if (value is List) {
-      final stringItems = value.map((dynamic item) => item.toString()).toList();
-      return _buildStringListEditor(
-        label: normalizedLabel,
-        items: stringItems,
-        fieldId: fieldId,
-        onChanged: (List<String> nextItems) => onChanged(nextItems),
-      );
-    }
-    if (value is Map) {
-      return OutlinedButton.icon(
-        onPressed: () => _editNestedJsonField(
-          title: normalizedLabel,
-          initialValue: const JsonEncoder.withIndent('  ').convert(value),
-          onApply: (dynamic nextValue) => onChanged(nextValue),
-        ),
-        icon: const Icon(Icons.data_object_outlined),
-        label: Text('Edit $normalizedLabel as JSON'),
-      );
-    }
-
-    final textValue = value?.toString() ?? '';
-    final isMultiline =
-        _multilineKeys.contains(label) ||
-        textValue.contains('\n') ||
-        textValue.length > 88;
-    return TextFormField(
-      key: ValueKey<String>(fieldId),
-      initialValue: textValue,
-      minLines: isMultiline ? 3 : 1,
-      maxLines: isMultiline ? 8 : 1,
-      decoration: InputDecoration(
-        labelText: normalizedLabel,
-        border: const OutlineInputBorder(),
-      ),
-      onChanged: onChanged,
-    );
+  void _mutateDocument(String message, VoidCallback callback) {
+    setState(() {
+      callback();
+      if (_selectedPageIndex >= _document.pages.length) {
+        _selectedPageIndex = _document.pages.length - 1;
+      }
+      _status = message;
+    });
   }
 
-  Widget _buildStringListEditor({
-    required String label,
-    required List<String> items,
-    required String fieldId,
-    required ValueChanged<List<String>> onChanged,
+  void _setStatus(String message) {
+    setState(() {
+      _status = message;
+    });
+  }
+
+  void _updateElementField(
+    Map<String, dynamic> element,
+    String field,
+    dynamic value,
+    String message,
+  ) {
+    _mutateDocument(message, () {
+      element[field] = value;
+    });
+  }
+
+  void _maybeOpenSlashMenu({
+    required IdocPage page,
+    required int index,
+    required Map<String, dynamic> element,
+    required String value,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFD7CCB9)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
+    if (_slashMenuOpen || value.trim() != '/') {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _slashMenuOpen) {
+        return;
+      }
+      _showSlashInsertMenu(page: page, index: index, element: element);
+    });
+  }
+
+  Future<void> _showSlashInsertMenu({
+    required IdocPage page,
+    required int index,
+    required Map<String, dynamic> element,
+  }) async {
+    _slashMenuOpen = true;
+    final chosenType = await showModalBottomSheet<String>(
+      context: context,
+      builder: (BuildContext context) {
+        final options = <String>[
+          'heading',
+          'paragraph',
+          'text',
+          'callout',
+          'button',
+          'link',
+          'code',
+          'math',
+          'list',
+          'question',
+          'image',
+          'input',
+        ];
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Expanded(child: Text(label)),
-              IconButton(
-                onPressed: () {
-                  final nextItems = List<String>.from(items)..add('New item');
-                  onChanged(nextItems);
-                },
-                icon: const Icon(Icons.add_circle_outline),
+              const SizedBox(height: 10),
+              const ListTile(
+                title: Text('Insert block'),
+                subtitle: Text('Choose what this slash block should become.'),
               ),
+              ...options.map(
+                (String type) => ListTile(
+                  leading: Icon(_iconForType(type)),
+                  title: Text(_labelize(type)),
+                  onTap: () => Navigator.of(context).pop(type),
+                ),
+              ),
+              const SizedBox(height: 10),
             ],
           ),
-          ...items.asMap().entries.map((MapEntry<int, String> entry) {
-            final index = entry.key;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: TextFormField(
-                      key: ValueKey<String>('$fieldId-$index'),
-                      initialValue: entry.value,
-                      minLines: 1,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        labelText: '$label ${index + 1}',
-                        border: const OutlineInputBorder(),
-                      ),
-                      onChanged: (String value) {
-                        final nextItems = List<String>.from(items);
-                        nextItems[index] = value;
-                        onChanged(nextItems);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: () {
-                      final nextItems = List<String>.from(items)
-                        ..removeAt(index);
-                      onChanged(nextItems);
-                    },
-                    icon: const Icon(Icons.remove_circle_outline),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
+        );
+      },
     );
-  }
+    _slashMenuOpen = false;
 
-  Future<void> _openDocumentFile() async {
-    final file = await openFile(
-      acceptedTypeGroups: <XTypeGroup>[
-        const XTypeGroup(
-          label: 'iDoc document',
-          extensions: <String>['json', 'html', 'htm', 'idoc'],
-        ),
-      ],
-    );
-    if (file == null) {
+    if (!mounted) {
       return;
     }
 
-    try {
-      final content = await file.readAsString();
-      final json = extractDocumentJsonFromContent(content);
-      setState(() {
-        _document = IdocDocument.fromJson(json);
-        _selectedPageIndex = 0;
-        _selectedActionKey = _document.actions.isEmpty
-            ? null
-            : _document.actions.keys.first;
-        _status = 'Opened ${file.name}.';
+    if (chosenType == null) {
+      _mutateDocument('Cleared slash insert.', () {
+        element['text'] = '';
       });
-    } catch (error) {
-      _showError('Could not open that file.\n\n$error');
-    }
-  }
-
-  Future<void> _saveJsonFile() async {
-    final location = await getSaveLocation(
-      suggestedName: suggestJsonFilename(_document),
-      acceptedTypeGroups: const <XTypeGroup>[
-        XTypeGroup(label: 'JSON', extensions: <String>['json']),
-      ],
-    );
-    if (location == null) {
       return;
     }
 
-    await File(location.path).writeAsString(_document.toPrettyJson());
-    _setStatus('Saved JSON to ${location.path}.');
-  }
-
-  Future<void> _exportHtmlFile() async {
-    if (_runtimeTemplate.isEmpty) {
-      _showError('The runtime template is not loaded yet.');
-      return;
-    }
-
-    final location = await getSaveLocation(
-      suggestedName: suggestHtmlFilename(_document),
-      acceptedTypeGroups: const <XTypeGroup>[
-        XTypeGroup(label: 'HTML', extensions: <String>['html']),
-      ],
+    final previousActionKey = element['action']?.toString();
+    final editorId = _blockId(element);
+    _mutateDocument(
+      'Changed block to ${_labelize(chosenType).toLowerCase()}.',
+      () {
+        final replacement = _newElement(chosenType);
+        replacement['_editorId'] = editorId;
+        page.elements[index] = replacement;
+        _selectedElementId = editorId;
+      },
     );
-    if (location == null) {
-      return;
+    if (previousActionKey != null && previousActionKey.isNotEmpty) {
+      _removeActionIfUnused(previousActionKey);
     }
-
-    final html = buildRuntimeHtml(
-      template: _runtimeTemplate,
-      document: _document,
-    );
-    await File(location.path).writeAsString(html);
-    _setStatus('Exported standalone runtime to ${location.path}.');
   }
 
-  void _createNewDocument() {
-    setState(() {
-      _document = createBlankDocument();
-      _selectedPageIndex = 0;
-      _selectedActionKey = null;
-      _status = 'Started a new document.';
-    });
+  Map<String, dynamic> _newElement(String type) {
+    final element = createDefaultElement(type);
+    element['_editorId'] = createUniqueId('block', _allBlockIds());
+    _normalizeElementSemanticIds(element);
+    if (_isBehaviorElement(element)) {
+      final actionKey = createUniqueId('action', _document.actions.keys);
+      element['action'] = actionKey;
+      _document.actions[actionKey] = createDefaultAction(
+        actionKey,
+        _defaultBehaviorTypeForElement(element),
+      );
+    }
+    return element;
   }
 
-  void _resetToDemo() {
-    setState(() {
-      _document = _demoDocument.deepCopy();
-      _selectedPageIndex = 0;
-      _selectedActionKey = _document.actions.isEmpty
-          ? null
-          : _document.actions.keys.first;
-      _status = 'Restored the bundled demo document.';
+  void _insertBlockAfterSelection(String type) {
+    final page = _currentPage;
+    final insertIndex = _selectedElementIndex == null
+        ? page.elements.length
+        : _selectedElementIndex! + 1;
+    _mutateDocument('Inserted ${_labelize(type).toLowerCase()} block.', () {
+      final element = _newElement(type);
+      page.elements.insert(insertIndex, element);
+      _selectedElementId = _blockId(element);
     });
   }
 
@@ -1142,12 +2029,15 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
           id: createUniqueId('page', existingIds),
           title: 'New Page',
           elements: <Map<String, dynamic>>[
-            createDefaultElement('heading'),
-            createDefaultElement('paragraph'),
+            _newElement('heading'),
+            _newElement('paragraph'),
           ],
         ),
       );
       _selectedPageIndex += 1;
+      _selectedElementId = _currentPage.elements.isNotEmpty
+          ? _blockId(_currentPage.elements.first)
+          : null;
     });
   }
 
@@ -1167,19 +2057,23 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     if (_document.pages.length <= 1) {
       return;
     }
+    final removedPage = _document.pages[index];
+    final actionKeys = removedPage.elements
+        .map((Map<String, dynamic> element) => element['action']?.toString())
+        .whereType<String>()
+        .toList();
     _mutateDocument('Deleted page ${index + 1}.', () {
       _document.pages.removeAt(index);
       if (_selectedPageIndex >= _document.pages.length) {
         _selectedPageIndex = _document.pages.length - 1;
       }
+      _selectedElementId = _currentPage.elements.isNotEmpty
+          ? _blockId(_currentPage.elements.first)
+          : null;
     });
-  }
-
-  void _addBlockToCurrentPage(String type) {
-    final page = _currentPage;
-    _mutateDocument('Added a ${_labelize(type).toLowerCase()} block.', () {
-      page.elements.add(createDefaultElement(type));
-    });
+    for (final String key in actionKeys) {
+      _removeActionIfUnused(key);
+    }
   }
 
   void _moveElement(IdocPage page, int index, int delta) {
@@ -1190,132 +2084,235 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     _mutateDocument('Reordered blocks.', () {
       final element = page.elements.removeAt(index);
       page.elements.insert(nextIndex, element);
+      _selectedElementId = _blockId(element);
     });
   }
 
   void _duplicateElement(IdocPage page, int index) {
+    final source = page.elements[index];
     _mutateDocument('Duplicated block ${index + 1}.', () {
       final duplicate = Map<String, dynamic>.from(
-        jsonDecode(jsonEncode(page.elements[index])) as Map,
+        jsonDecode(jsonEncode(source)) as Map,
       );
+      duplicate['_editorId'] = createUniqueId('block', _allBlockIds());
+      _normalizeElementSemanticIds(duplicate, forceNew: true);
+      if (_isBehaviorElement(duplicate)) {
+        final oldActionKey = _textValue(source['action']);
+        final newActionKey = createUniqueId('action', _document.actions.keys);
+        duplicate['action'] = newActionKey;
+        final existingAction = _document.actions[oldActionKey];
+        if (existingAction is Map<String, dynamic>) {
+          _document.actions[newActionKey] = Map<String, dynamic>.from(
+            jsonDecode(jsonEncode(existingAction)) as Map,
+          );
+        } else {
+          _document.actions[newActionKey] = createDefaultAction(
+            newActionKey,
+            _defaultBehaviorTypeForElement(duplicate),
+          );
+        }
+      }
       page.elements.insert(index + 1, duplicate);
+      _selectedElementId = _blockId(duplicate);
     });
   }
 
   void _removeElement(IdocPage page, int index) {
+    final removed = page.elements[index];
+    final actionKey = removed['action']?.toString();
     _mutateDocument('Deleted block ${index + 1}.', () {
       page.elements.removeAt(index);
+      _selectedElementId = page.elements.isNotEmpty
+          ? _blockId(page.elements[index == 0 ? 0 : index - 1])
+          : null;
     });
+    if (actionKey != null && actionKey.isNotEmpty) {
+      _removeActionIfUnused(actionKey);
+    }
   }
 
-  void _addAction(String type) {
-    final existingKeys = _document.actions.keys;
-    final actionKey = createUniqueId(type, existingKeys);
-    _mutateDocument('Added action $actionKey.', () {
-      _document.actions[actionKey] = createDefaultAction(actionKey, type);
-      _selectedActionKey = actionKey;
-    });
+  bool _isBehaviorElement(Map<String, dynamic> element) {
+    final type = _elementType(element);
+    return type == 'button' || type == 'link';
   }
 
-  void _removeAction(String key) {
-    _mutateDocument('Deleted action $key.', () {
-      _document.actions.remove(key);
-      _selectedActionKey = _document.actions.isEmpty
-          ? null
-          : _document.actions.keys.first;
-    });
+  String _defaultBehaviorTypeForElement(Map<String, dynamic> element) {
+    return _elementType(element) == 'link' ? 'openLink' : 'popup';
   }
 
-  Future<void> _renameAction(String oldKey) async {
-    final controller = TextEditingController(text: oldKey);
-    final nextKey = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Rename action'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Action key',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(controller.text.trim()),
-              child: const Text('Apply'),
-            ),
-          ],
-        );
-      },
+  Map<String, dynamic> _ensureBehaviorAction(Map<String, dynamic> element) {
+    final actionKey = _ensureBehaviorActionKey(element);
+    final existing = _document.actions[actionKey];
+    if (existing is Map<String, dynamic>) {
+      return existing;
+    }
+    final created = createDefaultAction(
+      actionKey,
+      _defaultBehaviorTypeForElement(element),
     );
+    _document.actions[actionKey] = created;
+    return created;
+  }
 
-    if (nextKey == null || nextKey.isEmpty || nextKey == oldKey) {
-      return;
+  String _ensureBehaviorActionKey(Map<String, dynamic> element) {
+    final existingKey = _textValue(element['action']);
+    if (existingKey.isNotEmpty) {
+      return existingKey;
     }
-    if (_document.actions.containsKey(nextKey)) {
-      _showError('An action named "$nextKey" already exists.');
-      return;
-    }
+    final key = createUniqueId('action', _document.actions.keys);
+    element['action'] = key;
+    _document.actions[key] = createDefaultAction(
+      key,
+      _defaultBehaviorTypeForElement(element),
+    );
+    return key;
+  }
 
-    _mutateDocument('Renamed action $oldKey to $nextKey.', () {
-      final value = _document.actions.remove(oldKey);
-      if (value != null) {
-        _document.actions[nextKey] = value;
-        _selectedActionKey = nextKey;
+  void _setBehaviorType(Map<String, dynamic> element, String type) {
+    _mutateDocument('Updated ${_elementType(element)} behavior.', () {
+      final key = _ensureBehaviorActionKey(element);
+      _document.actions[key] = createDefaultAction(key, type);
+    });
+  }
+
+  void _updateBehaviorField(
+    Map<String, dynamic> element,
+    String field,
+    dynamic value,
+    String message,
+  ) {
+    _mutateDocument(message, () {
+      final key = _ensureBehaviorActionKey(element);
+      final action = _ensureBehaviorAction(element);
+      action[field] = value;
+      _document.actions[key] = action;
+    });
+  }
+
+  void _removeActionIfUnused(String actionKey) {
+    final stillUsed = _document.pages.any(
+      (IdocPage page) => page.elements.any(
+        (Map<String, dynamic> element) =>
+            _textValue(element['action']) == actionKey,
+      ),
+    );
+    if (!stillUsed) {
+      _document.actions.remove(actionKey);
+    }
+  }
+
+  List<QuestionTarget> _questionTargets() {
+    final targets = <QuestionTarget>[];
+    for (final IdocPage page in _document.pages) {
+      for (final Map<String, dynamic> element in page.elements) {
+        if (_elementType(element) != 'question') {
+          continue;
+        }
+        final id = _textValue(element['id']);
+        if (id.isEmpty) {
+          continue;
+        }
+        targets.add(
+          QuestionTarget(
+            id: id,
+            label: '${page.title}: ${_textValue(element['prompt'])}',
+          ),
+        );
       }
+    }
+    return targets;
+  }
+
+  Future<void> _openDocumentFile() async {
+    final file = await openFile(
+      acceptedTypeGroups: <XTypeGroup>[
+        const XTypeGroup(
+          label: 'iDoc document',
+          extensions: <String>['json', 'html', 'htm', 'idoc'],
+        ),
+      ],
+    );
+    if (file == null) {
+      return;
+    }
+    try {
+      final content = await file.readAsString();
+      final json = extractDocumentJsonFromContent(content);
+      final nextDocument = IdocDocument.fromJson(json);
+      _normalizeDocumentForEditor(nextDocument);
+      setState(() {
+        _document = nextDocument;
+        _selectedPageIndex = 0;
+        _selectedElementId = _currentPage.elements.isNotEmpty
+            ? _blockId(_currentPage.elements.first)
+            : null;
+        _status = 'Opened ${file.name}.';
+      });
+    } catch (error) {
+      _showError('Could not open that file.\n\n$error');
+    }
+  }
+
+  Future<void> _saveJsonFile() async {
+    final location = await getSaveLocation(
+      suggestedName: suggestJsonFilename(_document),
+      acceptedTypeGroups: const <XTypeGroup>[
+        XTypeGroup(label: 'JSON', extensions: <String>['json']),
+      ],
+    );
+    if (location == null) {
+      return;
+    }
+    await File(location.path).writeAsString(_document.toPrettyJson());
+    _setStatus('Saved JSON to ${location.path}.');
+  }
+
+  Future<void> _exportHtmlFile() async {
+    if (_runtimeTemplate.isEmpty) {
+      _showError('The runtime template is not loaded yet.');
+      return;
+    }
+    final location = await getSaveLocation(
+      suggestedName: suggestHtmlFilename(_document),
+      acceptedTypeGroups: const <XTypeGroup>[
+        XTypeGroup(label: 'HTML', extensions: <String>['html']),
+      ],
+    );
+    if (location == null) {
+      return;
+    }
+    final html = buildRuntimeHtml(
+      template: _runtimeTemplate,
+      document: _document,
+    );
+    await File(location.path).writeAsString(html);
+    _setStatus('Exported standalone runtime to ${location.path}.');
+  }
+
+  void _createNewDocument() {
+    final nextDocument = createBlankDocument();
+    _normalizeDocumentForEditor(nextDocument);
+    setState(() {
+      _document = nextDocument;
+      _selectedPageIndex = 0;
+      _selectedElementId = _currentPage.elements.isNotEmpty
+          ? _blockId(_currentPage.elements.first)
+          : null;
+      _status = 'Started a new document.';
     });
   }
 
-  Future<void> _editNestedJsonField({
-    required String title,
-    required String initialValue,
-    required ValueChanged<dynamic> onApply,
-  }) async {
-    final controller = TextEditingController(text: initialValue);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Edit $title'),
-          content: SizedBox(
-            width: 620,
-            child: TextField(
-              controller: controller,
-              maxLines: 18,
-              minLines: 12,
-              decoration: const InputDecoration(border: OutlineInputBorder()),
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text),
-              child: const Text('Apply'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (result == null) {
-      return;
-    }
-
-    try {
-      onApply(jsonDecode(result));
-    } catch (error) {
-      _showError('That JSON field could not be parsed.\n\n$error');
-    }
+  void _resetToDemo() {
+    final nextDocument = _demoDocument.deepCopy();
+    _normalizeDocumentForEditor(nextDocument);
+    setState(() {
+      _document = nextDocument;
+      _selectedPageIndex = 0;
+      _selectedElementId = _currentPage.elements.isNotEmpty
+          ? _blockId(_currentPage.elements.first)
+          : null;
+      _status = 'Restored the bundled demo document.';
+    });
   }
 
   Future<void> _editRawJson() async {
@@ -1348,19 +2345,19 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
         );
       },
     );
-
     if (result == null) {
       return;
     }
-
     try {
       final parsed = extractDocumentJsonFromContent(result);
+      final nextDocument = IdocDocument.fromJson(parsed);
+      _normalizeDocumentForEditor(nextDocument);
       setState(() {
-        _document = IdocDocument.fromJson(parsed);
+        _document = nextDocument;
         _selectedPageIndex = 0;
-        _selectedActionKey = _document.actions.isEmpty
-            ? null
-            : _document.actions.keys.first;
+        _selectedElementId = _currentPage.elements.isNotEmpty
+            ? _blockId(_currentPage.elements.first)
+            : null;
         _status = 'Applied raw JSON changes.';
       });
     } catch (error) {
@@ -1386,6 +2383,177 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     );
   }
 
+  void _normalizeDocumentForEditor(IdocDocument document) {
+    final pageIds = <String>{};
+    final editorIds = <String>{};
+    final questionIds = <String>{};
+    final inputIds = <String>{};
+    for (var pageIndex = 0; pageIndex < document.pages.length; pageIndex += 1) {
+      final page = document.pages[pageIndex];
+      final currentPageId = page.id.trim();
+      page.id = currentPageId.isNotEmpty && !pageIds.contains(currentPageId)
+          ? currentPageId
+          : createUniqueId('page', pageIds);
+      pageIds.add(page.id);
+      if (page.title.trim().isEmpty) {
+        page.title = 'Page ${pageIndex + 1}';
+      }
+      for (final Map<String, dynamic> element in page.elements) {
+        final currentEditorId = _textValue(element['_editorId']);
+        if (currentEditorId.isEmpty || editorIds.contains(currentEditorId)) {
+          element['_editorId'] = createUniqueId('block', editorIds);
+        }
+        editorIds.add(_textValue(element['_editorId']));
+        final type = _elementType(element);
+        if (type == 'question') {
+          final existing = _textValue(element['id']);
+          if (existing.isEmpty || questionIds.contains(existing)) {
+            element['id'] = createUniqueId('question', questionIds);
+          }
+          questionIds.add(_textValue(element['id']));
+        }
+        if (type == 'input') {
+          final existing = _textValue(element['id']);
+          if (existing.isEmpty || inputIds.contains(existing)) {
+            element['id'] = createUniqueId('input', inputIds);
+          }
+          inputIds.add(_textValue(element['id']));
+        }
+      }
+    }
+  }
+
+  void _normalizeElementSemanticIds(
+    Map<String, dynamic> element, {
+    bool forceNew = false,
+  }) {
+    final type = _elementType(element);
+    if (type == 'question' && (forceNew || _textValue(element['id']).isEmpty)) {
+      element['id'] = createUniqueId('question', _allQuestionIds());
+    }
+    if (type == 'input' && (forceNew || _textValue(element['id']).isEmpty)) {
+      element['id'] = createUniqueId('input', _allInputIds());
+    }
+  }
+
+  Set<String> _allBlockIds() {
+    final ids = <String>{};
+    for (final IdocPage page in _document.pages) {
+      for (final Map<String, dynamic> element in page.elements) {
+        final id = _textValue(element['_editorId']);
+        if (id.isNotEmpty) {
+          ids.add(id);
+        }
+      }
+    }
+    return ids;
+  }
+
+  Set<String> _allQuestionIds() {
+    final ids = <String>{};
+    for (final IdocPage page in _document.pages) {
+      for (final Map<String, dynamic> element in page.elements) {
+        if (_elementType(element) == 'question') {
+          final id = _textValue(element['id']);
+          if (id.isNotEmpty) {
+            ids.add(id);
+          }
+        }
+      }
+    }
+    return ids;
+  }
+
+  Set<String> _allInputIds() {
+    final ids = <String>{};
+    for (final IdocPage page in _document.pages) {
+      for (final Map<String, dynamic> element in page.elements) {
+        if (_elementType(element) == 'input') {
+          final id = _textValue(element['id']);
+          if (id.isNotEmpty) {
+            ids.add(id);
+          }
+        }
+      }
+    }
+    return ids;
+  }
+
+  String _blockId(Map<String, dynamic> element) {
+    final existing = _textValue(element['_editorId']);
+    if (existing.isNotEmpty) {
+      return existing;
+    }
+    final created = createUniqueId('block', _allBlockIds());
+    element['_editorId'] = created;
+    return created;
+  }
+
+  String _elementType(Map<String, dynamic> element) {
+    return _textValue(element['type'], fallback: 'text');
+  }
+
+  String _textValue(dynamic value, {String fallback = ''}) {
+    final text = value?.toString() ?? '';
+    return text.isEmpty ? fallback : text;
+  }
+
+  int _numberValue(dynamic value, {int fallback = 0}) {
+    if (value is int) {
+      return value;
+    }
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  List<String> _stringList(dynamic value) {
+    if (value is List) {
+      return value.map((dynamic item) => item.toString()).toList();
+    }
+    return <String>[];
+  }
+
+  Color _toneBackground(String tone) {
+    switch (tone) {
+      case 'success':
+        return const Color(0xFFE8F7F0);
+      case 'warning':
+        return const Color(0xFFFFF3E1);
+      default:
+        return const Color(0xFFEAF7F5);
+    }
+  }
+
+  IconData _iconForType(String type) {
+    switch (type) {
+      case 'heading':
+        return Icons.title;
+      case 'paragraph':
+        return Icons.notes;
+      case 'text':
+        return Icons.text_fields;
+      case 'callout':
+        return Icons.info_outline;
+      case 'button':
+        return Icons.smart_button_outlined;
+      case 'link':
+        return Icons.link;
+      case 'code':
+        return Icons.code;
+      case 'math':
+        return Icons.functions;
+      case 'list':
+        return Icons.format_list_bulleted;
+      case 'question':
+        return Icons.quiz_outlined;
+      case 'image':
+        return Icons.image_outlined;
+      case 'input':
+        return Icons.keyboard_outlined;
+      default:
+        return Icons.add_box_outlined;
+    }
+  }
+
   String _labelize(String raw) {
     return raw
         .replaceAllMapped(
@@ -1405,17 +2573,9 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
   }
 }
 
-const Set<String> _multilineKeys = <String>{
-  'text',
-  'code',
-  'content',
-  'prompt',
-  'explanation',
-  'caption',
-  'placeholder',
-  'helpText',
-  'alt',
-  'tex',
-  'url',
-  'src',
-};
+class QuestionTarget {
+  const QuestionTarget({required this.id, required this.label});
+
+  final String id;
+  final String label;
+}
