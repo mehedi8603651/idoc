@@ -54,6 +54,13 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     'saveDocument',
     'exportDocument',
   ];
+  static const List<BlockWidthOption> _blockWidthOptions = <BlockWidthOption>[
+    BlockWidthOption(1, 'Full'),
+    BlockWidthOption(0.75, 'Wide'),
+    BlockWidthOption(2 / 3, '2/3'),
+    BlockWidthOption(0.5, 'Half'),
+    BlockWidthOption(1 / 3, '1/3'),
+  ];
 
   late IdocDocument _document;
   late IdocDocument _demoDocument;
@@ -64,6 +71,11 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
   RibbonTab _activeRibbonTab = RibbonTab.home;
   String _status = 'Loading assets...';
   bool _slashMenuOpen = false;
+  Map<String, dynamic>? _copiedElement;
+  Map<String, dynamic>? _copiedAction;
+  int? _moveTargetPageIndex;
+  String? _draggingBlockId;
+  String? _resizingBlockId;
 
   @override
   void initState() {
@@ -89,6 +101,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
         _selectedElementId = _currentPage.elements.isNotEmpty
             ? _blockId(_currentPage.elements.first)
             : null;
+        _moveTargetPageIndex = 0;
         _status =
             'Ready. Write directly on the page canvas, use / to switch text blocks, and export a standalone .idoc.html runtime.';
         _loading = false;
@@ -270,6 +283,16 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
           icon: const Icon(Icons.picture_as_pdf_outlined),
           label: const Text('Export .idoc.html'),
         ),
+        FilledButton.tonalIcon(
+          onPressed: _selectedElement == null ? null : _copySelectedBlock,
+          icon: const Icon(Icons.content_copy_outlined),
+          label: const Text('Copy block'),
+        ),
+        FilledButton.tonalIcon(
+          onPressed: _copiedElement == null ? null : _pasteBlockAfterSelection,
+          icon: const Icon(Icons.content_paste_go_outlined),
+          label: const Text('Paste block'),
+        ),
         OutlinedButton.icon(
           onPressed: _editRawJson,
           icon: const Icon(Icons.code),
@@ -410,6 +433,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                       _selectedElementId = page.elements.isNotEmpty
                           ? _blockId(page.elements.first)
                           : null;
+                      _moveTargetPageIndex = index;
                     });
                   },
                   borderRadius: BorderRadius.circular(18),
@@ -585,15 +609,43 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                             label: const Text('Add first block'),
                           )
                         else
-                          ...page.elements.asMap().entries.map((
-                            MapEntry<int, Map<String, dynamic>> entry,
-                          ) {
-                            return _buildBlockCard(
-                              page: page,
-                              index: entry.key,
-                              element: entry.value,
-                            );
-                          }),
+                          Column(
+                            children: <Widget>[
+                              const SizedBox(height: 8),
+                              LayoutBuilder(
+                                builder:
+                                    (
+                                      BuildContext context,
+                                      BoxConstraints constraints,
+                                    ) {
+                                      final availableWidth =
+                                          constraints.maxWidth;
+                                      return Wrap(
+                                        spacing: 16,
+                                        runSpacing: 18,
+                                        children: <Widget>[
+                                          for (
+                                            var index = 0;
+                                            index < page.elements.length;
+                                            index += 1
+                                          )
+                                            _buildCanvasBlockTile(
+                                              page: page,
+                                              index: index,
+                                              element: page.elements[index],
+                                              availableWidth: availableWidth,
+                                            ),
+                                          if (_draggingBlockId != null)
+                                            _buildCanvasEndDropTarget(
+                                              page: page,
+                                              availableWidth: availableWidth,
+                                            ),
+                                        ],
+                                      );
+                                    },
+                              ),
+                            ],
+                          ),
                       ],
                     ),
                   ),
@@ -606,21 +658,164 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     );
   }
 
+  Widget _buildCanvasBlockTile({
+    required IdocPage page,
+    required int index,
+    required Map<String, dynamic> element,
+    required double availableWidth,
+  }) {
+    final blockId = _blockId(element);
+    final blockWidth = _blockPixelWidth(element, availableWidth);
+    return Builder(
+      builder: (BuildContext targetContext) {
+        return DragTarget<String>(
+          onWillAcceptWithDetails: (DragTargetDetails<String> details) =>
+              details.data != blockId,
+          onAcceptWithDetails: (DragTargetDetails<String> details) {
+            final insertionIndex = _dropInsertionIndex(
+              targetContext,
+              index,
+              details.offset,
+            );
+            _reorderElementById(page, details.data, insertionIndex);
+          },
+          builder:
+              (
+                BuildContext context,
+                List<String?> candidateData,
+                List<dynamic> rejectedData,
+              ) {
+                final isDropTarget = candidateData.isNotEmpty;
+                final card = SizedBox(
+                  width: blockWidth,
+                  child: _buildBlockCard(
+                    page: page,
+                    index: index,
+                    element: element,
+                    availableWidth: availableWidth,
+                  ),
+                );
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 140),
+                  padding: EdgeInsets.all(isDropTarget ? 4 : 0),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(26),
+                    border: Border.all(
+                      color: isDropTarget
+                          ? const Color(0xFF0F766E)
+                          : Colors.transparent,
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Opacity(
+                    opacity: _draggingBlockId == blockId ? 0.38 : 1,
+                    child: card,
+                  ),
+                );
+              },
+        );
+      },
+    );
+  }
+
+  Widget _buildCanvasEndDropTarget({
+    required IdocPage page,
+    required double availableWidth,
+  }) {
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (DragTargetDetails<String> details) =>
+          details.data.isNotEmpty,
+      onAcceptWithDetails: (DragTargetDetails<String> details) {
+        _reorderElementById(page, details.data, page.elements.length);
+      },
+      builder:
+          (
+            BuildContext context,
+            List<String?> candidateData,
+            List<dynamic> rejectedData,
+          ) {
+            final active = candidateData.isNotEmpty;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 140),
+              width: availableWidth,
+              height: active ? 72 : 36,
+              decoration: BoxDecoration(
+                color: active
+                    ? const Color(0xFFDCF4EE)
+                    : const Color(0xFFF7F2E8),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: active
+                      ? const Color(0xFF0F766E)
+                      : const Color(0xFFE4DAC7),
+                  style: BorderStyle.solid,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                active
+                    ? 'Drop here to move block to the end'
+                    : 'Drag a block here',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: const Color(0xFF5D6668),
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            );
+          },
+    );
+  }
+
+  Widget _buildDragFeedbackCard(Map<String, dynamic> element) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F766E),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 24,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(_iconForType(_elementType(element)), color: Colors.white),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              _labelize(_elementType(element)),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBlockCard({
     required IdocPage page,
     required int index,
     required Map<String, dynamic> element,
+    required double availableWidth,
   }) {
     final type = _elementType(element);
     final selected = _isSelected(element);
     final theme = Theme.of(context);
+    final blockId = _blockId(element);
+    final currentWidthPercent = (_blockWidthFactor(element) * 100).round();
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTap: () => _selectElement(element),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.only(top: 18),
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: selected ? const Color(0xFFEEF8F6) : const Color(0xFFFFFCF7),
@@ -633,7 +828,9 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Row(
+            Wrap(
+              spacing: 10,
+              runSpacing: 8,
               children: <Widget>[
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -656,41 +853,158 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                     color: const Color(0xFF5D6668),
                   ),
                 ),
-                const Spacer(),
                 if (selected)
-                  Text(
-                    'Selected',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: const Color(0xFF0F766E),
-                      fontWeight: FontWeight.w700,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCF4EE),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      'Selected',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: const Color(0xFF0F766E),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                const SizedBox(width: 6),
-                IconButton(
-                  tooltip: 'Move block up',
-                  onPressed: index > 0
-                      ? () => _moveElement(page, index, -1)
-                      : null,
-                  icon: const Icon(Icons.arrow_upward),
-                ),
-                IconButton(
-                  tooltip: 'Move block down',
-                  onPressed: index < page.elements.length - 1
-                      ? () => _moveElement(page, index, 1)
-                      : null,
-                  icon: const Icon(Icons.arrow_downward),
-                ),
-                IconButton(
-                  tooltip: 'Duplicate block',
-                  onPressed: () => _duplicateElement(page, index),
-                  icon: const Icon(Icons.copy_outlined),
-                ),
-                IconButton(
-                  tooltip: 'Delete block',
-                  onPressed: () => _removeElement(page, index),
-                  icon: const Icon(Icons.delete_outline),
-                ),
               ],
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: 2,
+                runSpacing: 2,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                alignment: WrapAlignment.end,
+                children: <Widget>[
+                  IconButton(
+                    tooltip: 'Copy block',
+                    onPressed: () => _copyElement(element),
+                    icon: const Icon(Icons.content_copy_outlined),
+                  ),
+                  IconButton(
+                    tooltip: 'Duplicate block',
+                    onPressed: () => _duplicateElement(page, index),
+                    icon: const Icon(Icons.copy_all_outlined),
+                  ),
+                  IconButton(
+                    tooltip: 'Delete block',
+                    onPressed: () => _removeElement(page, index),
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.grab,
+                    child: Draggable<String>(
+                      data: blockId,
+                      dragAnchorStrategy: pointerDragAnchorStrategy,
+                      onDragStarted: () {
+                        setState(() {
+                          _draggingBlockId = blockId;
+                          _selectedElementId = blockId;
+                        });
+                      },
+                      onDragEnd: (_) {
+                        if (mounted) {
+                          setState(() {
+                            _draggingBlockId = null;
+                          });
+                        }
+                      },
+                      feedback: Material(
+                        color: Colors.transparent,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: _blockPixelWidth(
+                              element,
+                              availableWidth,
+                            ).clamp(220, 420),
+                          ),
+                          child: _buildDragFeedbackCard(element),
+                        ),
+                      ),
+                      childWhenDragging: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 8,
+                        ),
+                        child: Icon(
+                          Icons.drag_indicator,
+                          color: Color(0xFF9CA7A9),
+                        ),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 8,
+                        ),
+                        child: Icon(Icons.drag_indicator),
+                      ),
+                    ),
+                  ),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.resizeLeftRight,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onHorizontalDragStart: (_) {
+                        setState(() {
+                          _resizingBlockId = blockId;
+                          _selectedElementId = blockId;
+                        });
+                      },
+                      onHorizontalDragUpdate: (DragUpdateDetails details) {
+                        _resizeBlockWidth(
+                          element,
+                          availableWidth,
+                          details.delta.dx,
+                        );
+                      },
+                      onHorizontalDragEnd: (_) {
+                        if (mounted) {
+                          setState(() {
+                            _resizingBlockId = null;
+                          });
+                        }
+                      },
+                      onHorizontalDragCancel: () {
+                        if (mounted) {
+                          setState(() {
+                            _resizingBlockId = null;
+                          });
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 8,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                              Icons.drag_handle,
+                              color: _resizingBlockId == blockId
+                                  ? const Color(0xFF0F766E)
+                                  : const Color(0xFF5D6668),
+                            ),
+                            Text(
+                              '$currentWidthPercent%',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: const Color(0xFF5D6668),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 14),
             _buildCanvasElementEditor(page, index, element),
@@ -728,9 +1042,12 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
               value: value,
             );
           },
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.6,
+          style: _styleForElement(
+            element,
+            Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.6,
+            ),
           ),
           minLines: 1,
           maxLines: 4,
@@ -754,7 +1071,10 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
               value: value,
             );
           },
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.7),
+          style: _styleForElement(
+            element,
+            Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.7),
+          ),
           minLines: 2,
           maxLines: 8,
         );
@@ -838,8 +1158,11 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                     value,
                     'Updated callout title.',
                   ),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+                  style: _styleForElement(
+                    element,
+                    Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),
@@ -890,7 +1213,10 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
               value,
               'Updated callout text.',
             ),
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.7),
+            style: _styleForElement(
+              element,
+              Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.7),
+            ),
             minLines: 2,
             maxLines: 6,
           ),
@@ -943,7 +1269,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
               color: Color(0xFFF1F7F6),
               fontFamily: 'Consolas',
               height: 1.5,
-            ),
+            ).copyWith(fontSize: _fontSizeFor(element, fallback: 14)),
             decoration: const InputDecoration(
               border: InputBorder.none,
               hintText: 'Write code here',
@@ -977,9 +1303,12 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
             initialValue: _textValue(element['text']),
             onChanged: (String value) =>
                 _updateElementField(element, 'text', value, 'Updated quote.'),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontStyle: FontStyle.italic,
-              height: 1.6,
+            style: _styleForElement(
+              element,
+              Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontStyle: FontStyle.italic,
+                height: 1.6,
+              ),
             ),
             minLines: 2,
             maxLines: 5,
@@ -995,9 +1324,10 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
             value,
             'Updated quote source.',
           ),
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: const Color(0xFF5D6668)),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: const Color(0xFF5D6668),
+            fontSize: (_fontSizeFor(element, fallback: 18) - 2).clamp(12, 44),
+          ),
         ),
       ],
     );
@@ -1046,9 +1376,12 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                         'Updated list item.',
                       );
                     },
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyLarge?.copyWith(height: 1.7),
+                    style: _styleForElement(
+                      element,
+                      Theme.of(
+                        context,
+                      ).textTheme.bodyLarge?.copyWith(height: 1.7),
+                    ),
                     minLines: 1,
                     maxLines: 4,
                   ),
@@ -1105,9 +1438,12 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
             value,
             'Updated question prompt.',
           ),
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          style: _styleForElement(
+            element,
+            Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
           minLines: 2,
           maxLines: 5,
         ),
@@ -1128,6 +1464,9 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                     decoration: InputDecoration(
                       labelText: 'Option ${entry.key + 1}',
                       border: const OutlineInputBorder(),
+                    ),
+                    style: TextStyle(
+                      fontSize: _fontSizeFor(element, fallback: 18),
                     ),
                     onChanged: (String value) {
                       final nextOptions = List<String>.from(options);
@@ -1211,6 +1550,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
           initialValue: _textValue(element['explanation']),
           minLines: 2,
           maxLines: 5,
+          style: TextStyle(fontSize: _fontSizeFor(element, fallback: 18)),
           decoration: const InputDecoration(
             labelText: 'Explanation',
             border: OutlineInputBorder(),
@@ -1232,6 +1572,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
         TextFormField(
           key: ValueKey<String>('${_blockId(element)}-input-label'),
           initialValue: _textValue(element['label']),
+          style: TextStyle(fontSize: _fontSizeFor(element, fallback: 18)),
           decoration: const InputDecoration(
             labelText: 'Label',
             border: OutlineInputBorder(),
@@ -1247,6 +1588,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
         TextFormField(
           key: ValueKey<String>('${_blockId(element)}-input-placeholder'),
           initialValue: _textValue(element['placeholder']),
+          style: TextStyle(fontSize: _fontSizeFor(element, fallback: 18)),
           decoration: const InputDecoration(
             labelText: 'Placeholder',
             border: OutlineInputBorder(),
@@ -1264,6 +1606,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
           initialValue: _textValue(element['helpText']),
           minLines: 1,
           maxLines: 3,
+          style: TextStyle(fontSize: _fontSizeFor(element, fallback: 18)),
           decoration: const InputDecoration(
             labelText: 'Help text',
             border: OutlineInputBorder(),
@@ -1409,9 +1752,12 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                 value,
                 'Updated block label.',
               ),
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: _styleForElement(
+                element,
+                Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
             ),
           ),
         ],
@@ -1553,6 +1899,11 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
             ),
           ),
           const SizedBox(height: 16),
+          _buildPanel(
+            title: 'Selected block',
+            child: _buildSelectedBlockPanel(),
+          ),
+          const SizedBox(height: 16),
           _buildPanel(title: 'Behavior', child: _buildBehaviorPanel()),
           const SizedBox(height: 16),
           _buildPanel(
@@ -1628,6 +1979,188 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
           child,
         ],
       ),
+    );
+  }
+
+  Widget _buildSelectedBlockPanel() {
+    final element = _selectedElement;
+    if (element == null) {
+      return const Text(
+        'Select a block on the page to reorder it, copy it, move it to another page, or adjust its text size.',
+      );
+    }
+
+    final type = _elementType(element);
+    final moveTargetPage = _resolvedMoveTargetPageIndex();
+    final supportsFontSize = _supportsFontSize(element);
+    final currentFontSize = _fontSizeFor(
+      element,
+      fallback: _defaultFontSizeFor(type),
+    );
+    final currentBlockWidth = _blockWidthFactor(element);
+    final currentBlockWidthPercent = (currentBlockWidth * 100).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Icon(_iconForType(type)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _labelize(type),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF6F0E4),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text('Page ${_selectedPageIndex + 1}'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text('Block width', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 4),
+        Text(
+          '$currentBlockWidthPercent% width',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: const Color(0xFF5D6668)),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _blockWidthOptions
+              .map(
+                (BlockWidthOption option) => ChoiceChip(
+                  label: Text(option.label),
+                  selected: (currentBlockWidth - option.factor).abs() < 0.01,
+                  onSelected: (_) => _setBlockWidth(element, option.factor),
+                ),
+              )
+              .toList(),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Use the card edge handle for mouse resize. Half and third widths let blocks sit horizontally on the same row when there is enough space.',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: const Color(0xFF5D6668)),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () => _clearBlockWidth(element),
+            icon: const Icon(Icons.restart_alt),
+            label: const Text('Reset block width'),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: <Widget>[
+            FilledButton.tonalIcon(
+              onPressed: _copySelectedBlock,
+              icon: const Icon(Icons.content_copy_outlined),
+              label: const Text('Copy'),
+            ),
+            FilledButton.tonalIcon(
+              onPressed: _copiedElement == null
+                  ? null
+                  : _pasteBlockAfterSelection,
+              icon: const Icon(Icons.content_paste_go_outlined),
+              label: const Text('Paste after'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _selectedElementIndex == null
+                  ? null
+                  : () =>
+                        _duplicateElement(_currentPage, _selectedElementIndex!),
+              icon: const Icon(Icons.copy_all_outlined),
+              label: const Text('Duplicate'),
+            ),
+          ],
+        ),
+        if (supportsFontSize) ...<Widget>[
+          const SizedBox(height: 16),
+          Row(
+            children: <Widget>[
+              Text('Text size', style: Theme.of(context).textTheme.titleSmall),
+              const Spacer(),
+              Text('${currentFontSize.round()} px'),
+            ],
+          ),
+          Slider(
+            value: currentFontSize.clamp(12, 42),
+            min: 12,
+            max: 42,
+            divisions: 15,
+            label: currentFontSize.round().toString(),
+            onChanged: (double value) => _updateElementField(
+              element,
+              'fontSize',
+              value.round(),
+              'Updated text size.',
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => _clearBlockFontSize(element),
+              icon: const Icon(Icons.restart_alt),
+              label: const Text('Reset text size'),
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        DropdownButtonFormField<int>(
+          key: ValueKey<String>('move-target-${_selectedElementId ?? 'none'}'),
+          initialValue: moveTargetPage,
+          decoration: const InputDecoration(
+            labelText: 'Move block to page',
+            border: OutlineInputBorder(),
+          ),
+          items: _document.pages
+              .asMap()
+              .entries
+              .map(
+                (MapEntry<int, IdocPage> entry) => DropdownMenuItem<int>(
+                  value: entry.key,
+                  child: Text('Page ${entry.key + 1}: ${entry.value.title}'),
+                ),
+              )
+              .toList(),
+          onChanged: _document.pages.length < 2
+              ? null
+              : (int? value) {
+                  if (value != null) {
+                    setState(() {
+                      _moveTargetPageIndex = value;
+                    });
+                  }
+                },
+        ),
+        const SizedBox(height: 10),
+        FilledButton.tonalIcon(
+          onPressed:
+              _document.pages.length < 2 ||
+                  _selectedElementIndex == null ||
+                  moveTargetPage == _selectedPageIndex
+              ? null
+              : () => _moveSelectedBlockToPage(moveTargetPage),
+          icon: const Icon(Icons.drive_file_move_outline),
+          label: const Text('Move block'),
+        ),
+      ],
     );
   }
 
@@ -1872,6 +2405,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
   void _selectElement(Map<String, dynamic> element) {
     setState(() {
       _selectedElementId = _blockId(element);
+      _moveTargetPageIndex = _selectedPageIndex;
     });
   }
 
@@ -1880,6 +2414,10 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
       callback();
       if (_selectedPageIndex >= _document.pages.length) {
         _selectedPageIndex = _document.pages.length - 1;
+      }
+      if (_moveTargetPageIndex == null ||
+          _moveTargetPageIndex! >= _document.pages.length) {
+        _moveTargetPageIndex = _selectedPageIndex;
       }
       _status = message;
     });
@@ -2038,6 +2576,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
       _selectedElementId = _currentPage.elements.isNotEmpty
           ? _blockId(_currentPage.elements.first)
           : null;
+      _moveTargetPageIndex = _selectedPageIndex;
     });
   }
 
@@ -2050,6 +2589,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
       final page = _document.pages.removeAt(index);
       _document.pages.insert(nextIndex, page);
       _selectedPageIndex = nextIndex;
+      _moveTargetPageIndex = nextIndex;
     });
   }
 
@@ -2070,48 +2610,159 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
       _selectedElementId = _currentPage.elements.isNotEmpty
           ? _blockId(_currentPage.elements.first)
           : null;
+      _moveTargetPageIndex = _selectedPageIndex;
     });
     for (final String key in actionKeys) {
       _removeActionIfUnused(key);
     }
   }
 
-  void _moveElement(IdocPage page, int index, int delta) {
-    final nextIndex = index + delta;
-    if (nextIndex < 0 || nextIndex >= page.elements.length) {
+  void _reorderElements(IdocPage page, int oldIndex, int newIndex) {
+    if (oldIndex == newIndex ||
+        oldIndex < 0 ||
+        newIndex < 0 ||
+        oldIndex >= page.elements.length ||
+        newIndex >= page.elements.length) {
       return;
     }
     _mutateDocument('Reordered blocks.', () {
-      final element = page.elements.removeAt(index);
-      page.elements.insert(nextIndex, element);
+      final element = page.elements.removeAt(oldIndex);
+      page.elements.insert(newIndex, element);
       _selectedElementId = _blockId(element);
     });
   }
 
+  void _reorderElementById(
+    IdocPage page,
+    String draggedBlockId,
+    int targetIndex,
+  ) {
+    final oldIndex = page.elements.indexWhere(
+      (Map<String, dynamic> element) => _blockId(element) == draggedBlockId,
+    );
+    if (oldIndex == -1) {
+      return;
+    }
+    var nextIndex = targetIndex;
+    if (oldIndex < targetIndex) {
+      nextIndex -= 1;
+    }
+    if (nextIndex < 0) {
+      nextIndex = 0;
+    }
+    if (nextIndex >= page.elements.length) {
+      nextIndex = page.elements.length - 1;
+    }
+    _reorderElements(page, oldIndex, nextIndex);
+  }
+
+  int _dropInsertionIndex(
+    BuildContext targetContext,
+    int targetIndex,
+    Offset globalOffset,
+  ) {
+    final renderBox = targetContext.findRenderObject() as RenderBox?;
+    if (renderBox == null) {
+      return targetIndex;
+    }
+    final localOffset = renderBox.globalToLocal(globalOffset);
+    final dropAfter = localOffset.dy > renderBox.size.height / 2;
+    return dropAfter ? targetIndex + 1 : targetIndex;
+  }
+
+  void _copyElement(Map<String, dynamic> element) {
+    final sourceActionKey = _textValue(element['action']);
+    final sourceAction = sourceActionKey.isEmpty
+        ? null
+        : _document.actions[sourceActionKey];
+    setState(() {
+      _copiedElement = Map<String, dynamic>.from(
+        jsonDecode(jsonEncode(element)) as Map,
+      );
+      _copiedAction = sourceAction is Map<String, dynamic>
+          ? Map<String, dynamic>.from(
+              jsonDecode(jsonEncode(sourceAction)) as Map,
+            )
+          : null;
+      _status =
+          'Copied ${_labelize(_elementType(element)).toLowerCase()} block.';
+    });
+  }
+
+  void _copySelectedBlock() {
+    final element = _selectedElement;
+    if (element == null) {
+      return;
+    }
+    _copyElement(element);
+  }
+
+  Map<String, dynamic> _cloneElementForInsertion(
+    Map<String, dynamic> source, {
+    Map<String, dynamic>? sourceAction,
+  }) {
+    final duplicate = Map<String, dynamic>.from(
+      jsonDecode(jsonEncode(source)) as Map,
+    );
+    duplicate['_editorId'] = createUniqueId('block', _allBlockIds());
+    _normalizeElementSemanticIds(duplicate, forceNew: true);
+    if (_isBehaviorElement(duplicate)) {
+      final newActionKey = createUniqueId('action', _document.actions.keys);
+      duplicate['action'] = newActionKey;
+      if (sourceAction != null) {
+        _document.actions[newActionKey] = Map<String, dynamic>.from(
+          jsonDecode(jsonEncode(sourceAction)) as Map,
+        );
+      } else {
+        _document.actions[newActionKey] = createDefaultAction(
+          newActionKey,
+          _defaultBehaviorTypeForElement(duplicate),
+        );
+      }
+    }
+    return duplicate;
+  }
+
+  Map<String, dynamic> _materializeCopiedBlock() {
+    final source = _copiedElement;
+    if (source == null) {
+      throw StateError('No copied block is available.');
+    }
+    return _cloneElementForInsertion(source, sourceAction: _copiedAction);
+  }
+
+  void _pasteBlockAfterSelection() {
+    if (_copiedElement == null) {
+      _setStatus('Copy a block first.');
+      return;
+    }
+    final page = _currentPage;
+    final insertIndex = _selectedElementIndex == null
+        ? page.elements.length
+        : _selectedElementIndex! + 1;
+    _mutateDocument(
+      'Pasted ${_labelize(_elementType(_copiedElement!)).toLowerCase()} block.',
+      () {
+        final duplicate = _materializeCopiedBlock();
+        page.elements.insert(insertIndex, duplicate);
+        _selectedElementId = _blockId(duplicate);
+      },
+    );
+  }
+
   void _duplicateElement(IdocPage page, int index) {
     final source = page.elements[index];
+    final sourceActionKey = _textValue(source['action']);
+    final sourceAction = sourceActionKey.isEmpty
+        ? null
+        : _document.actions[sourceActionKey];
     _mutateDocument('Duplicated block ${index + 1}.', () {
-      final duplicate = Map<String, dynamic>.from(
-        jsonDecode(jsonEncode(source)) as Map,
+      final duplicate = _cloneElementForInsertion(
+        source,
+        sourceAction: sourceAction is Map<String, dynamic>
+            ? sourceAction
+            : null,
       );
-      duplicate['_editorId'] = createUniqueId('block', _allBlockIds());
-      _normalizeElementSemanticIds(duplicate, forceNew: true);
-      if (_isBehaviorElement(duplicate)) {
-        final oldActionKey = _textValue(source['action']);
-        final newActionKey = createUniqueId('action', _document.actions.keys);
-        duplicate['action'] = newActionKey;
-        final existingAction = _document.actions[oldActionKey];
-        if (existingAction is Map<String, dynamic>) {
-          _document.actions[newActionKey] = Map<String, dynamic>.from(
-            jsonDecode(jsonEncode(existingAction)) as Map,
-          );
-        } else {
-          _document.actions[newActionKey] = createDefaultAction(
-            newActionKey,
-            _defaultBehaviorTypeForElement(duplicate),
-          );
-        }
-      }
       page.elements.insert(index + 1, duplicate);
       _selectedElementId = _blockId(duplicate);
     });
@@ -2129,6 +2780,25 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     if (actionKey != null && actionKey.isNotEmpty) {
       _removeActionIfUnused(actionKey);
     }
+  }
+
+  void _moveSelectedBlockToPage(int targetPageIndex) {
+    final currentIndex = _selectedElementIndex;
+    if (currentIndex == null ||
+        targetPageIndex < 0 ||
+        targetPageIndex >= _document.pages.length ||
+        targetPageIndex == _selectedPageIndex) {
+      return;
+    }
+    final sourcePage = _currentPage;
+    _mutateDocument('Moved block to page ${targetPageIndex + 1}.', () {
+      final element = sourcePage.elements.removeAt(currentIndex);
+      final targetPage = _document.pages[targetPageIndex];
+      targetPage.elements.add(element);
+      _selectedPageIndex = targetPageIndex;
+      _selectedElementId = _blockId(element);
+      _moveTargetPageIndex = targetPageIndex;
+    });
   }
 
   bool _isBehaviorElement(Map<String, dynamic> element) {
@@ -2201,6 +2871,23 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     }
   }
 
+  int _resolvedMoveTargetPageIndex() {
+    final target = _moveTargetPageIndex ?? _selectedPageIndex;
+    if (target < 0) {
+      return 0;
+    }
+    if (target >= _document.pages.length) {
+      return _document.pages.length - 1;
+    }
+    return target;
+  }
+
+  void _clearBlockFontSize(Map<String, dynamic> element) {
+    _mutateDocument('Reset text size.', () {
+      element.remove('fontSize');
+    });
+  }
+
   List<QuestionTarget> _questionTargets() {
     final targets = <QuestionTarget>[];
     for (final IdocPage page in _document.pages) {
@@ -2246,6 +2933,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
         _selectedElementId = _currentPage.elements.isNotEmpty
             ? _blockId(_currentPage.elements.first)
             : null;
+        _moveTargetPageIndex = 0;
         _status = 'Opened ${file.name}.';
       });
     } catch (error) {
@@ -2298,6 +2986,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
       _selectedElementId = _currentPage.elements.isNotEmpty
           ? _blockId(_currentPage.elements.first)
           : null;
+      _moveTargetPageIndex = 0;
       _status = 'Started a new document.';
     });
   }
@@ -2311,6 +3000,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
       _selectedElementId = _currentPage.elements.isNotEmpty
           ? _blockId(_currentPage.elements.first)
           : null;
+      _moveTargetPageIndex = 0;
       _status = 'Restored the bundled demo document.';
     });
   }
@@ -2358,6 +3048,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
         _selectedElementId = _currentPage.elements.isNotEmpty
             ? _blockId(_currentPage.elements.first)
             : null;
+        _moveTargetPageIndex = 0;
         _status = 'Applied raw JSON changes.';
       });
     } catch (error) {
@@ -2505,6 +3196,113 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     return int.tryParse(value?.toString() ?? '') ?? fallback;
   }
 
+  double _fontSizeFor(Map<String, dynamic> element, {double fallback = 18}) {
+    final raw = element['fontSize'];
+    if (raw is num) {
+      return raw.toDouble().clamp(12, 42);
+    }
+    return fallback.clamp(12, 42);
+  }
+
+  double _blockWidthFactor(Map<String, dynamic> element) {
+    final raw = element['width'];
+    final value = raw is num ? raw.toDouble() : double.tryParse('$raw');
+    if (value == null) {
+      return 1;
+    }
+    return _clampBlockWidthFactor(value);
+  }
+
+  double _clampBlockWidthFactor(double value) {
+    final clamped = value.clamp(0.34, 1.0).toDouble();
+    return double.parse(clamped.toStringAsFixed(2));
+  }
+
+  double _blockPixelWidth(Map<String, dynamic> element, double availableWidth) {
+    const spacing = 16.0;
+    final factor = _blockWidthFactor(element);
+    if (factor >= 0.995) {
+      return availableWidth;
+    }
+    return (availableWidth * factor) - (spacing * (1 - factor));
+  }
+
+  void _setBlockWidth(Map<String, dynamic> element, double factor) {
+    _updateElementField(
+      element,
+      'width',
+      _clampBlockWidthFactor(factor),
+      'Updated block width.',
+    );
+  }
+
+  void _resizeBlockWidth(
+    Map<String, dynamic> element,
+    double availableWidth,
+    double deltaX,
+  ) {
+    final currentFactor = _blockWidthFactor(element);
+    final nextFactor = _clampBlockWidthFactor(
+      currentFactor + (deltaX / availableWidth),
+    );
+    _updateElementField(element, 'width', nextFactor, 'Resized block width.');
+  }
+
+  void _clearBlockWidth(Map<String, dynamic> element) {
+    _mutateDocument('Reset block width.', () {
+      element.remove('width');
+    });
+  }
+
+  double _defaultFontSizeFor(String type) {
+    switch (type) {
+      case 'heading':
+        return 32;
+      case 'button':
+      case 'link':
+        return 20;
+      case 'quote':
+        return 20;
+      case 'question':
+        return 18;
+      case 'code':
+        return 14;
+      default:
+        return 18;
+    }
+  }
+
+  bool _supportsFontSize(Map<String, dynamic> element) {
+    switch (_elementType(element)) {
+      case 'heading':
+      case 'paragraph':
+      case 'text':
+      case 'callout':
+      case 'code':
+      case 'quote':
+      case 'list':
+      case 'question':
+      case 'input':
+      case 'button':
+      case 'link':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  TextStyle _styleForElement(
+    Map<String, dynamic> element,
+    TextStyle? baseStyle,
+  ) {
+    return (baseStyle ?? const TextStyle()).copyWith(
+      fontSize: _fontSizeFor(
+        element,
+        fallback: _defaultFontSizeFor(_elementType(element)),
+      ),
+    );
+  }
+
   List<String> _stringList(dynamic value) {
     if (value is List) {
       return value.map((dynamic item) => item.toString()).toList();
@@ -2577,5 +3375,12 @@ class QuestionTarget {
   const QuestionTarget({required this.id, required this.label});
 
   final String id;
+  final String label;
+}
+
+class BlockWidthOption {
+  const BlockWidthOption(this.factor, this.label);
+
+  final double factor;
   final String label;
 }
