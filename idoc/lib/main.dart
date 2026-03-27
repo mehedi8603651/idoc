@@ -1121,7 +1121,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
     int minLines = 1,
     int maxLines = 1,
   }) {
-    return TextFormField(
+    return _IdocTextEditor(
       key: ValueKey<String>(fieldKey),
       initialValue: initialValue,
       minLines: minLines,
@@ -1260,7 +1260,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
             ),
           ),
           const SizedBox(height: 12),
-          TextFormField(
+          _IdocTextEditor(
             key: ValueKey<String>('${_blockId(element)}-code'),
             initialValue: _textValue(element['code']),
             minLines: 6,
@@ -1454,7 +1454,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
             child: Row(
               children: <Widget>[
                 Expanded(
-                  child: TextFormField(
+                  child: _IdocTextEditor(
                     key: ValueKey<String>(
                       '${_blockId(element)}-option-${entry.key}',
                     ),
@@ -1545,7 +1545,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
                 },
         ),
         const SizedBox(height: 12),
-        TextFormField(
+        _IdocTextEditor(
           key: ValueKey<String>('${_blockId(element)}-explanation'),
           initialValue: _textValue(element['explanation']),
           minLines: 2,
@@ -1601,7 +1601,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
           ),
         ),
         const SizedBox(height: 10),
-        TextFormField(
+        _IdocTextEditor(
           key: ValueKey<String>('${_blockId(element)}-input-help'),
           initialValue: _textValue(element['helpText']),
           minLines: 1,
@@ -1625,7 +1625,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
   Widget _buildMathEditor(Map<String, dynamic> element) {
     return Column(
       children: <Widget>[
-        TextFormField(
+        _IdocTextEditor(
           key: ValueKey<String>('${_blockId(element)}-math-tex'),
           initialValue: _textValue(element['tex']),
           minLines: 2,
@@ -1675,7 +1675,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
           ),
         ),
         const SizedBox(height: 10),
-        TextFormField(
+        _IdocTextEditor(
           key: ValueKey<String>('${_blockId(element)}-image-src'),
           initialValue: _textValue(element['src']),
           minLines: 1,
@@ -1707,7 +1707,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
           ),
         ),
         const SizedBox(height: 10),
-        TextFormField(
+        _IdocTextEditor(
           key: ValueKey<String>('${_blockId(element)}-image-caption'),
           initialValue: _textValue(element['caption']),
           minLines: 1,
@@ -2238,7 +2238,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
             ),
           ),
           const SizedBox(height: 10),
-          TextFormField(
+          _IdocTextEditor(
             key: ValueKey<String>('${_blockId(element)}-behavior-content'),
             initialValue: _textValue(action['content']),
             minLines: 2,
@@ -3006,7 +3006,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
   }
 
   Future<void> _editRawJson() async {
-    final controller = TextEditingController(text: _document.toPrettyJson());
+    var draftText = _document.toPrettyJson();
     final result = await showDialog<String>(
       context: context,
       builder: (BuildContext context) {
@@ -3014,10 +3014,12 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
           title: const Text('Edit raw iDoc JSON'),
           content: SizedBox(
             width: 760,
-            child: TextField(
-              controller: controller,
+            child: _IdocTextEditor(
+              key: const ValueKey<String>('raw-json-editor'),
+              initialValue: draftText,
               maxLines: 28,
               minLines: 20,
+              onChanged: (String value) => draftText = value,
               style: const TextStyle(fontFamily: 'Consolas'),
               decoration: const InputDecoration(border: OutlineInputBorder()),
             ),
@@ -3028,7 +3030,7 @@ class _IdocStudioHomeState extends State<IdocStudioHome> {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text),
+              onPressed: () => Navigator.of(context).pop(draftText),
               child: const Text('Apply JSON'),
             ),
           ],
@@ -3383,4 +3385,105 @@ class BlockWidthOption {
 
   final double factor;
   final String label;
+}
+
+class _IdocTextEditor extends StatefulWidget {
+  const _IdocTextEditor({
+    super.key,
+    required this.initialValue,
+    required this.onChanged,
+    this.style,
+    this.minLines = 1,
+    this.maxLines = 1,
+    this.decoration = const InputDecoration(),
+  });
+
+  final String initialValue;
+  final ValueChanged<String> onChanged;
+  final TextStyle? style;
+  final int minLines;
+  final int maxLines;
+  final InputDecoration decoration;
+
+  @override
+  State<_IdocTextEditor> createState() => _IdocTextEditorState();
+}
+
+class _IdocTextEditorState extends State<_IdocTextEditor> {
+  late final FocusNode _focusNode;
+  late final TextEditingController _controller;
+
+  bool get _isMultiline => widget.minLines > 1 || widget.maxLines > 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void didUpdateWidget(covariant _IdocTextEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialValue != _controller.text && !_focusNode.hasFocus) {
+      _controller.value = TextEditingValue(
+        text: widget.initialValue,
+        selection: TextSelection.collapsed(offset: widget.initialValue.length),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (!_isMultiline ||
+        event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.tab) {
+      return KeyEventResult.ignored;
+    }
+    const tabInsertion = '    ';
+    final selection = _controller.selection;
+    final rawStart = selection.isValid
+        ? selection.start
+        : _controller.text.length;
+    final rawEnd = selection.isValid ? selection.end : _controller.text.length;
+    final start = rawStart < rawEnd ? rawStart : rawEnd;
+    final end = rawStart < rawEnd ? rawEnd : rawStart;
+    final nextText = _controller.text.replaceRange(start, end, tabInsertion);
+    final caretOffset = start + tabInsertion.length;
+    _controller.value = TextEditingValue(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: caretOffset),
+      composing: TextRange.empty,
+    );
+    widget.onChanged(nextText);
+    return KeyEventResult.handled;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      onKeyEvent: _handleKeyEvent,
+      child: TextFormField(
+        controller: _controller,
+        focusNode: _focusNode,
+        minLines: widget.minLines,
+        maxLines: widget.maxLines,
+        keyboardType: _isMultiline
+            ? TextInputType.multiline
+            : TextInputType.text,
+        textInputAction: _isMultiline
+            ? TextInputAction.newline
+            : TextInputAction.done,
+        style: widget.style,
+        decoration: widget.decoration,
+        onChanged: widget.onChanged,
+      ),
+    );
+  }
 }

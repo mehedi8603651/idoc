@@ -83,6 +83,8 @@
     .display-math { display: block; margin: .5em 0; overflow-x: auto; }
     .inline-math { display: inline-block; max-width: 100%; vertical-align: middle; }
     .content p, .content li { line-height: 1.75; }
+    .rich-text { white-space: pre-wrap; tab-size: 4; }
+    .rich-text .display-math, .rich-text .inline-math { white-space: normal; }
     .callout { border-radius: 20px; padding: 18px; background: var(--surface-soft); border: 1px solid color-mix(in srgb, var(--page-border) 76%, transparent 24%); }
     .callout.info { background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface-soft) 28%); }
     .callout.success { background: color-mix(in srgb, var(--success-soft) 72%, var(--surface-soft) 28%); }
@@ -606,6 +608,7 @@ __IDOC_JSON__
 
       function setRichText(node, value, searchable) {
         node.innerHTML = '';
+        node.classList.add('rich-text');
         parseRichText(value).forEach((segment) => {
           if (segment.type === 'math') {
             node.appendChild(renderMathSegment(segment.tex, segment.display));
