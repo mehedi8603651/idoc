@@ -1,0 +1,223 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: #f7f2e8;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  background: #161d1f;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  height: 100%;
+}
+
+body {
+  background: var(--page-shell, #f7f2e8);
+}
+
+:root[data-theme='dark'] body {
+  --page-shell: #161d1f;
+}
+
+.idoc-editor-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #5d6668;
+  font-size: 15px;
+}
+
+.idoc-editor-root {
+  position: relative;
+  min-height: 100%;
+  padding: 32px;
+  box-sizing: border-box;
+  background: var(--page-shell, #f7f2e8);
+}
+
+.idoc-editor-root .tiptap {
+  min-height: 820px;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 34px 42px;
+  border-radius: 28px;
+  border: 1px solid #e2d8c6;
+  background: #ffffff;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.07);
+  color: #162023;
+  font-size: 18px;
+  line-height: 1.35;
+  outline: none;
+  box-sizing: border-box;
+}
+
+:root[data-theme='dark'] .idoc-editor-root .tiptap {
+  background: #11181a;
+  color: #f4f8f7;
+  border-color: #273234;
+}
+
+.idoc-editor-root .tiptap p {
+  margin: 0;
+  min-height: 1.35em;
+}
+
+.idoc-editor-root .tiptap h1,
+.idoc-editor-root .tiptap h2,
+.idoc-editor-root .tiptap h3,
+.idoc-editor-root .tiptap blockquote,
+.idoc-editor-root .tiptap ul,
+.idoc-editor-root .tiptap ol,
+.idoc-editor-root .tiptap hr,
+.idoc-block-card {
+  margin: 0.55rem 0;
+}
+
+.idoc-editor-root .tiptap h1 {
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.idoc-editor-root .tiptap h2 {
+  font-size: 1.6rem;
+  line-height: 1.15;
+}
+
+.idoc-editor-root .tiptap h3 {
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+
+.idoc-editor-root .tiptap blockquote {
+  border-left: 4px solid #0f766e;
+  padding-left: 14px;
+  color: #425154;
+}
+
+.idoc-editor-root .tiptap ul,
+.idoc-editor-root .tiptap ol {
+  padding-left: 1.5rem;
+}
+
+.idoc-editor-root .tiptap hr {
+  border: none;
+  border-top: 1px solid #ddd0b7;
+}
+
+.idoc-editor-root .tiptap p.is-editor-empty:first-child::before {
+  content: 'Start typing';
+  color: #9aa6a9;
+  float: left;
+  height: 0;
+  pointer-events: none;
+  font-style: italic;
+}
+
+.idoc-block-card {
+  display: block;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid #e4dac7;
+  background: #fffcf7;
+}
+
+.idoc-block-card.is-selected,
+.ProseMirror-selectednode.idoc-block-card {
+  border-color: #0f766e;
+  background: #eef8f6;
+}
+
+:root[data-theme='dark'] .idoc-block-card {
+  background: #182123;
+  border-color: #314143;
+}
+
+.idoc-block-badge {
+  display: inline-flex;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: #f6f0e4;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+:root[data-theme='dark'] .idoc-block-badge {
+  background: #263234;
+}
+
+.idoc-block-preview {
+  margin-top: 0.7rem;
+  font-size: 0.95rem;
+  color: #5d6668;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:root[data-theme='dark'] .idoc-block-preview {
+  color: #b9c6c8;
+}
+
+.idoc-slash-menu {
+  position: fixed;
+  left: 32px;
+  bottom: 28px;
+  width: min(440px, calc(100vw - 64px));
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid #ddd0b7;
+  background: rgba(255, 252, 247, 0.97);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(12px);
+}
+
+:root[data-theme='dark'] .idoc-slash-menu {
+  border-color: #2e3a3c;
+  background: rgba(17, 24, 26, 0.96);
+}
+
+.idoc-slash-title {
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.idoc-slash-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.idoc-slash-item {
+  border: 1px solid #e4dac7;
+  background: #ffffff;
+  color: #162023;
+  border-radius: 14px;
+  padding: 10px 12px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.idoc-slash-item:hover {
+  border-color: #0f766e;
+  background: #eef8f6;
+}
+
+:root[data-theme='dark'] .idoc-slash-item {
+  background: #182123;
+  border-color: #314143;
+  color: #f4f8f7;
+}
+
+:root[data-theme='dark'] .idoc-slash-item:hover {
+  background: #203133;
+  border-color: #34b3a4;
+}

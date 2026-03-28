@@ -56,11 +56,8 @@ class IdocDocument {
       pages.add(
         IdocPage(
           id: 'page-1',
-          title: 'Page 1',
-          elements: <Map<String, dynamic>>[
-            createDefaultElement('heading'),
-            createDefaultElement('paragraph'),
-          ],
+          title: '',
+          elements: <Map<String, dynamic>>[createDefaultElement('paragraph')],
         ),
       );
     }
@@ -121,7 +118,7 @@ class IdocPage {
       id: json['id']?.toString().trim().isNotEmpty == true
           ? json['id'].toString()
           : 'page-1',
-      title: json['title']?.toString() ?? 'Untitled Page',
+      title: json['title']?.toString() ?? '',
       elements: rawElements
           .map((dynamic raw) => _asStringKeyedMap(raw))
           .toList(growable: true),
@@ -154,11 +151,8 @@ IdocDocument createBlankDocument() {
     pages: <IdocPage>[
       IdocPage(
         id: 'page-1',
-        title: 'Page 1',
-        elements: <Map<String, dynamic>>[
-          createDefaultElement('heading'),
-          createDefaultElement('paragraph'),
-        ],
+        title: '',
+        elements: <Map<String, dynamic>>[createDefaultElement('paragraph')],
       ),
     ],
     actions: <String, dynamic>{},
@@ -174,10 +168,7 @@ Map<String, dynamic> createDefaultElement(String type) {
         'text': 'New heading',
       };
     case 'paragraph':
-      return <String, dynamic>{
-        'type': 'paragraph',
-        'text': 'Write paragraph text here.',
-      };
+      return <String, dynamic>{'type': 'paragraph', 'text': ''};
     case 'text':
       return <String, dynamic>{
         'type': 'text',

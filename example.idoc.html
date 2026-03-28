@@ -72,17 +72,45 @@
     .sidebar p { margin: 0 0 16px; color: var(--muted); font-size: .92rem; line-height: 1.5; }
     .page-link { width: 100%; margin-bottom: 10px; text-align: left; padding: 14px; border-radius: 18px; border: 1px solid color-mix(in srgb, var(--page-border) 72%, transparent 28%); background: var(--page); color: var(--text); cursor: pointer; }
     .page-link.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 74%, var(--page) 26%); }
-    .reader { flex: 1; overflow: auto; padding: 24px; }
-    .reader-inner { width: min(920px, 100%); margin: 0 auto; display: flex; flex-direction: column; gap: 26px; }
-    .page-shell { padding: 18px; border-radius: 26px; background: color-mix(in srgb, var(--surface) 88%, transparent 12%); box-shadow: var(--shadow); }
-    .page { background: var(--page); border-radius: 22px; border: 1px solid color-mix(in srgb, var(--page-border) 78%, transparent 22%); padding: 32px; }
-    .eyebrow { display: flex; justify-content: space-between; gap: 16px; align-items: center; color: var(--muted); font-size: .92rem; margin-bottom: 12px; }
+    .reader { flex: 1; overflow: auto; padding: 18px; }
+    .reader-inner { width: min(920px, 100%); margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+    .page { background: var(--page); border-radius: 24px; border: 1px solid color-mix(in srgb, var(--page-border) 78%, transparent 22%); padding: 24px 24px 18px; min-height: 360px; display: flex; flex-direction: column; box-shadow: var(--shadow); }
     .page h2 { margin: 0 0 24px; font-size: clamp(1.8rem, 3vw, 2.4rem); letter-spacing: -.04em; }
-    .content { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+    .content { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; flex: 1 1 auto; }
     .content > * { flex: 1 1 100%; min-width: 0; max-width: 100%; }
+    .text-stack { display: flex; flex-direction: column; gap: 0; flex: 1 1 100%; min-width: 0; max-width: 100%; }
+    .page-number { margin-top: 18px; align-self: center; color: var(--muted); font-size: .92rem; letter-spacing: .18em; }
     .display-math { display: block; margin: .5em 0; overflow-x: auto; }
     .inline-math { display: inline-block; max-width: 100%; vertical-align: middle; }
-    .content p, .content li { line-height: 1.75; }
+    .content p,
+    .content li,
+    .content label,
+    .content .caption,
+    .content .help,
+    .content .cite { line-height: 1.68; text-align: left; }
+    .content p,
+    .content blockquote,
+    .content ul,
+    .content ol,
+    .content figure,
+    .content pre,
+    .content section,
+    .content .field,
+    .content .math { margin: 0; }
+    .content ul,
+    .content ol { padding-left: 1.45rem; }
+    .content li + li { margin-top: .34em; }
+    .content ul li::marker,
+    .content ol li::marker { color: var(--muted); }
+    .text-stack > .text-flow-block + .text-flow-block { margin-top: 0; }
+    .text-stack > h1.text-flow-block + .text-flow-block,
+    .text-stack > h2.text-flow-block + .text-flow-block,
+    .text-stack > h3.text-flow-block + .text-flow-block,
+    .text-stack > h4.text-flow-block + .text-flow-block,
+    .text-stack > h5.text-flow-block + .text-flow-block,
+    .text-stack > h6.text-flow-block + .text-flow-block { margin-top: .24em; }
+    .quote p { margin: 0; }
+    .quote .cite { margin-top: 8px; display: block; }
     .rich-text { white-space: pre-wrap; tab-size: 4; }
     .rich-text .display-math, .rich-text .inline-math { white-space: normal; }
     .callout { border-radius: 20px; padding: 18px; background: var(--surface-soft); border: 1px solid color-mix(in srgb, var(--page-border) 76%, transparent 24%); }
@@ -115,7 +143,7 @@
     .modal { position: absolute; top: 50%; left: 50%; width: min(520px, calc(100vw - 32px)); transform: translate(-50%, -50%); background: var(--page); border-radius: 22px; border: 1px solid color-mix(in srgb, var(--page-border) 70%, transparent 30%); box-shadow: var(--shadow); padding: 22px; }
     .modal h2 { margin: 0 0 10px; }
     @media (max-width: 980px) { .topbar, .workspace { flex-direction: column; align-items: stretch; } .sidebar { width: auto; flex-basis: auto; border-right: 0; border-bottom: 1px solid color-mix(in srgb, var(--page-border) 70%, transparent 30%); } }
-    @media (max-width: 640px) { .topbar, .reader { padding-left: 14px; padding-right: 14px; } .page { padding: 22px 18px; } .search-wrap.open .search { width: min(160px, 44vw); } .content > * { flex-basis: 100% !important; max-width: 100% !important; width: 100% !important; } }
+    @media (max-width: 640px) { .topbar, .reader { padding-left: 14px; padding-right: 14px; } .page { padding: 18px 16px 14px; min-height: 280px; } .search-wrap.open .search { width: min(160px, 44vw); } .content > * { flex-basis: 100% !important; max-width: 100% !important; width: 100% !important; } }
   </style>
 </head>
 <body>
@@ -162,181 +190,181 @@
   <div class="modal-root" id="modal-root"></div>
   <script type="application/json" id="idoc-data">
 {
-    "meta":  {
-                 "title":  "iDoc Interactive Demo",
-                 "author":  "Prototype Office",
-                 "version":  "1.0",
-                 "theme":  "light",
-                 "recommendedFilename":  "example.idoc.html"
-             },
-    "state":  {
-                  "currentPage":  0
-              },
-    "pages":  [
-                  {
-                      "id":  "page-1",
-                      "title":  "Welcome",
-                      "elements":  [
-                                       {
-                                           "type":  "heading",
-                                           "level":  1,
-                                           "text":  "Welcome to iDoc"
-                                       },
-                                       {
-                                           "type":  "paragraph",
-                                           "text":  "iDoc is a browser-based prototype for interactive documents. This standalone HTML is the generated reader. Authoring now happens in the Flutter desktop app, which exports the embedded JSON into this runtime."
-                                       },
-                                       {
-                                           "type":  "callout",
-                                           "tone":  "info",
-                                           "title":  "Recommended workflow",
-                                           "text":  "Use iDoc Studio on Windows to create pages, blocks, and actions. Then export a fresh .idoc.html file for sharing."
-                                       },
-                                       {
-                                           "type":  "math",
-                                           "tex":  "\\int_0^1 x^2 \\, dx = \\frac{1}{3}",
-                                           "displayMode":  true
-                                       },
-                                       {
-                                           "type":  "button",
-                                           "label":  "Open overview popup",
-                                           "variant":  "primary",
-                                           "action":  "open-intro-popup"
-                                       },
-                                       {
-                                           "type":  "text",
-                                           "text":  "Recommended save name for the standalone file: example.idoc.html"
-                                       }
-                                   ]
-                  },
-                  {
-                      "id":  "page-2",
-                      "title":  "Controls and Code",
-                      "elements":  [
-                                       {
-                                           "type":  "heading",
-                                           "level":  2,
-                                           "text":  "Reader controls stay in the runtime"
-                                       },
-                                       {
-                                           "type":  "paragraph",
-                                           "text":  "The generated HTML keeps navigation, theme switching, search, links, popups, and question logic. Editing controls are intentionally removed from the runtime."
-                                       },
-                                       {
-                                           "type":  "code",
-                                           "language":  "js",
-                                           "code":  "function goToPage(index) {\\n  state.currentPage = index;\\n}\\n\\nfunction exportDocument() {\\n  downloadEmbeddedJson();\\n}"
-                                       },
-                                       {
-                                           "type":  "quote",
-                                           "text":  "Author in the app. Read in the file.",
-                                           "cite":  "iDoc workflow"
-                                       },
-                                       {
-                                           "type":  "list",
-                                           "ordered":  false,
-                                           "items":  [
-                                                         "Flutter Windows app handles authoring.",
-                                                         "Export produces a standalone .idoc.html file.",
-                                                         "The HTML file keeps only the interactive reading runtime."
-                                                     ]
-                                       },
-                                       {
-                                           "type":  "button",
-                                           "label":  "Go to page 3",
-                                           "action":  "goto-questions"
-                                       },
-                                       {
-                                           "type":  "button",
-                                           "label":  "Toggle theme",
-                                           "action":  "toggle-theme"
-                                       },
-                                       {
-                                           "type":  "link",
-                                           "label":  "Open MDN in a new tab",
-                                           "action":  "open-mdn"
-                                       }
-                                   ]
-                  },
-                  {
-                      "id":  "page-3",
-                      "title":  "Questions and Export",
-                      "elements":  [
-                                       {
-                                           "type":  "heading",
-                                           "level":  2,
-                                           "text":  "Quiz, reveal, and export"
-                                       },
-                                       {
-                                           "type":  "paragraph",
-                                           "text":  "The runtime still supports questions, answer reveal, and JSON export. Search terms like export, runtime, and Flutter should match here."
-                                       },
-                                       {
-                                           "type":  "question",
-                                           "id":  "question-engine",
-                                           "questionType":  "mcq",
-                                           "prompt":  "Where should users author new iDoc documents now?",
-                                           "options":  [
-                                                           "Directly inside the exported HTML runtime.",
-                                                           "Inside the Flutter Windows authoring app.",
-                                                           "In a hidden backend service."
-                                                       ],
-                                           "answer":  1,
-                                           "explanation":  "The Flutter editor is now the source of truth. The HTML file is the generated runtime output."
-                                       },
-                                       {
-                                           "type":  "button",
-                                           "label":  "Reveal answer",
-                                           "action":  "show-q1-answer"
-                                       },
-                                       {
-                                           "type":  "button",
-                                           "label":  "Save reader state",
-                                           "action":  "save-doc"
-                                       },
-                                       {
-                                           "type":  "button",
-                                           "label":  "Export current JSON",
-                                           "variant":  "primary",
-                                           "action":  "export-json"
-                                       },
-                                       {
-                                           "type":  "callout",
-                                           "tone":  "success",
-                                           "title":  "Shareable output",
-                                           "text":  "You can send the exported .idoc.html file to someone else and they can open it directly in the browser."
-                                       }
-                                   ]
-                  }
-              ],
-    "actions":  {
-                    "open-intro-popup":  {
-                                             "type":  "popup",
-                                             "title":  "About this demo",
-                                             "content":  "This popup is defined in the document action map. The generated HTML file stays transparent and self-contained."
-                                         },
-                    "goto-questions":  {
-                                           "type":  "gotoPage",
-                                           "page":  2
-                                       },
-                    "toggle-theme":  {
-                                         "type":  "toggleTheme"
-                                     },
-                    "open-mdn":  {
-                                     "type":  "openLink",
-                                     "url":  "https://developer.mozilla.org/"
-                                 },
-                    "show-q1-answer":  {
-                                           "type":  "showAnswer",
-                                           "target":  "question-engine"
-                                       },
-                    "save-doc":  {
-                                     "type":  "saveDocument"
-                                 },
-                    "export-json":  {
-                                        "type":  "exportDocument"
-                                    }
-                }
+  "meta": {
+    "title": "iDoc Interactive Demo",
+    "author": "Prototype Office",
+    "version": "1.0",
+    "theme": "light",
+    "recommendedFilename": "example.idoc.html"
+  },
+  "state": {
+    "currentPage": 0
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "title": "Welcome",
+      "elements": [
+        {
+          "type": "heading",
+          "level": 1,
+          "text": "Welcome to iDoc"
+        },
+        {
+          "type": "paragraph",
+          "text": "iDoc is a browser-based prototype for interactive documents. This standalone HTML is the generated reader. Authoring now happens in the Flutter desktop app, which exports the embedded JSON into this runtime."
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "title": "Recommended workflow",
+          "text": "Use iDoc Studio on Windows to create pages, blocks, and actions. Then export a fresh .idoc.html file for sharing."
+        },
+        {
+          "type": "math",
+          "tex": "\\int_0^1 x^2 \\, dx = \\frac{1}{3}",
+          "displayMode": true
+        },
+        {
+          "type": "button",
+          "label": "Open overview popup",
+          "variant": "primary",
+          "action": "open-intro-popup"
+        },
+        {
+          "type": "text",
+          "text": "Recommended save name for the standalone file: example.idoc.html"
+        }
+      ]
+    },
+    {
+      "id": "page-2",
+      "title": "Controls and Code",
+      "elements": [
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Reader controls stay in the runtime"
+        },
+        {
+          "type": "paragraph",
+          "text": "The generated HTML keeps navigation, theme switching, search, links, popups, and question logic. Editing controls are intentionally removed from the runtime."
+        },
+        {
+          "type": "code",
+          "language": "js",
+          "code": "function goToPage(index) {\\n  state.currentPage = index;\\n}\\n\\nfunction exportDocument() {\\n  downloadEmbeddedJson();\\n}"
+        },
+        {
+          "type": "quote",
+          "text": "Author in the app. Read in the file.",
+          "cite": "iDoc workflow"
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            "Flutter Windows app handles authoring.",
+            "Export produces a standalone .idoc.html file.",
+            "The HTML file keeps only the interactive reading runtime."
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Go to page 3",
+          "action": "goto-questions"
+        },
+        {
+          "type": "button",
+          "label": "Toggle theme",
+          "action": "toggle-theme"
+        },
+        {
+          "type": "link",
+          "label": "Open MDN in a new tab",
+          "action": "open-mdn"
+        }
+      ]
+    },
+    {
+      "id": "page-3",
+      "title": "Questions and Export",
+      "elements": [
+        {
+          "type": "heading",
+          "level": 2,
+          "text": "Quiz, reveal, and export"
+        },
+        {
+          "type": "paragraph",
+          "text": "The runtime still supports questions, answer reveal, and JSON export. Search terms like export, runtime, and Flutter should match here."
+        },
+        {
+          "type": "question",
+          "id": "question-engine",
+          "questionType": "mcq",
+          "prompt": "Where should users author new iDoc documents now?",
+          "options": [
+            "Directly inside the exported HTML runtime.",
+            "Inside the Flutter Windows authoring app.",
+            "In a hidden backend service."
+          ],
+          "answer": 1,
+          "explanation": "The Flutter editor is now the source of truth. The HTML file is the generated runtime output."
+        },
+        {
+          "type": "button",
+          "label": "Reveal answer",
+          "action": "show-q1-answer"
+        },
+        {
+          "type": "button",
+          "label": "Save reader state",
+          "action": "save-doc"
+        },
+        {
+          "type": "button",
+          "label": "Export current JSON",
+          "variant": "primary",
+          "action": "export-json"
+        },
+        {
+          "type": "callout",
+          "tone": "success",
+          "title": "Shareable output",
+          "text": "You can send the exported .idoc.html file to someone else and they can open it directly in the browser."
+        }
+      ]
+    }
+  ],
+  "actions": {
+    "open-intro-popup": {
+      "type": "popup",
+      "title": "About this demo",
+      "content": "This popup is defined in the document action map. The generated HTML file stays transparent and self-contained."
+    },
+    "goto-questions": {
+      "type": "gotoPage",
+      "page": 2
+    },
+    "toggle-theme": {
+      "type": "toggleTheme"
+    },
+    "open-mdn": {
+      "type": "openLink",
+      "url": "https://developer.mozilla.org/"
+    },
+    "show-q1-answer": {
+      "type": "showAnswer",
+      "target": "question-engine"
+    },
+    "save-doc": {
+      "type": "saveDocument"
+    },
+    "export-json": {
+      "type": "exportDocument"
+    }
+  }
 }
   </script>
   <script>
@@ -385,7 +413,7 @@
         const meta = map(raw.meta);
         const pages = Array.isArray(raw.pages) ? raw.pages.map((page, index) => ({
           id: text(page && page.id, `page-${index + 1}`),
-          title: text(page && page.title, `Page ${index + 1}`),
+          title: text(page && page.title, ''),
           elements: Array.isArray(page && page.elements) ? page.elements.map(map) : []
         })) : [];
         if (!pages.length) throw new Error('Document does not contain any pages.');
@@ -487,8 +515,8 @@
         const hits = searchPages();
         doc.pages.forEach((page, index) => {
           const button = el('button', { className: `page-link${index === state.currentPage ? ' active' : ''}`, type: 'button' });
-          button.appendChild(el('div', { textContent: page.title }));
-          button.appendChild(el('div', { className: 'caption', textContent: `${page.elements.length} blocks${hits.includes(index) ? ' • search hit' : ''}` }));
+          button.appendChild(el('div', { textContent: page.title || `Page ${index + 1}` }));
+          button.appendChild(el('div', { className: 'caption', textContent: `${page.elements.length} blocks${hits.includes(index) ? ' â€¢ search hit' : ''}` }));
           button.addEventListener('click', () => goToPage(index));
           refs.pageList.appendChild(button);
         });
@@ -497,19 +525,29 @@
       function renderPages() {
         refs.readerInner.innerHTML = '';
         doc.pages.forEach((page, index) => {
-          const shell = el('section', { className: 'page-shell' });
-          shell.dataset.pageIndex = String(index);
           const card = el('article', { className: 'page' });
-          const eyebrow = el('div', { className: 'eyebrow' });
-          eyebrow.appendChild(el('span', { className: 'pill', textContent: `Page ${index + 1}` }));
-          eyebrow.appendChild(el('span', { className: 'pill', textContent: page.id }));
-          card.appendChild(eyebrow);
-          card.appendChild(el('h2', { textContent: page.title }));
+          card.dataset.pageIndex = String(index);
+          if (page.title) {
+            card.appendChild(el('h2', { textContent: page.title }));
+          }
           const content = el('div', { className: 'content' });
-          page.elements.forEach((element) => content.appendChild(renderElement(element)));
+          let textStack = null;
+          page.elements.forEach((element) => {
+            const node = renderElement(element);
+            if (isTextFlowElement(element)) {
+              if (!textStack) {
+                textStack = el('div', { className: 'text-stack' });
+                content.appendChild(textStack);
+              }
+              textStack.appendChild(node);
+              return;
+            }
+            textStack = null;
+            content.appendChild(node);
+          });
           card.appendChild(content);
-          shell.appendChild(card);
-          refs.readerInner.appendChild(shell);
+          card.appendChild(el('div', { className: 'page-number', textContent: String(index + 1) }));
+          refs.readerInner.appendChild(card);
         });
         observePages();
       }
@@ -518,14 +556,14 @@
         const type = text(element.type, 'unknown');
         if (type === 'heading') {
           const level = Math.min(6, Math.max(1, int(element.level, 1)));
-          const node = el(`h${level}`);
+          const node = el(`h${level}`, { className: 'text-flow-block' });
           setRichText(node, text(element.text, ''), true);
           applyFontSize(node, element);
           applyBlockWidth(node, element);
           return node;
         }
         if (type === 'paragraph' || type === 'text') {
-          const node = el('p');
+          const node = el('p', { className: 'text-flow-block' });
           setRichText(node, text(element.text, ''), true);
           applyFontSize(node, element);
           applyBlockWidth(node, element);
@@ -589,7 +627,7 @@
           return node;
         }
         if (type === 'quote') {
-          const node = el('blockquote', { className: 'quote' });
+          const node = el('blockquote', { className: 'quote text-flow-block' });
           const body = el('p');
           setRichText(body, text(element.text, ''), true);
           node.appendChild(body);
@@ -603,7 +641,7 @@
           return node;
         }
         if (type === 'list') {
-          const list = el(element.ordered ? 'ol' : 'ul');
+          const list = el(element.ordered ? 'ol' : 'ul', { className: 'text-flow-block' });
           (Array.isArray(element.items) ? element.items : []).forEach((item) => {
             const li = el('li');
             setRichText(li, String(item), true);
@@ -882,6 +920,11 @@
         return wrapper;
       }
 
+      function isTextFlowElement(element) {
+        const type = text(element && element.type, '');
+        return type === 'heading' || type === 'paragraph' || type === 'text' || type === 'quote' || type === 'list';
+      }
+
       function normalizeTex(value) {
         return String(value || '').replace(/\\\\(?=[A-Za-z,;!%])/g, '\\');
       }
@@ -898,7 +941,7 @@
             renderSidebar();
           }
         }, { root: refs.reader, threshold: [.45, .62] });
-        refs.readerInner.querySelectorAll('.page-shell').forEach((node) => observer.observe(node));
+        refs.readerInner.querySelectorAll('.page').forEach((node) => observer.observe(node));
       }
 
       function loadViewerState() {
