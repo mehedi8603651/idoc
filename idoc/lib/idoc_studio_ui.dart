@@ -175,7 +175,6 @@ extension _IdocStudioUi on _IdocStudioHomeState {
         ),
         _buildInsertTool(icon: Icons.link, label: 'Link', type: 'link'),
         _buildInsertTool(icon: Icons.code, label: 'Code', type: 'code'),
-        _buildInsertTool(icon: Icons.functions, label: 'Math', type: 'math'),
         _buildInsertTool(
           icon: Icons.quiz_outlined,
           label: 'Question',
@@ -1509,17 +1508,29 @@ extension _IdocStudioUi on _IdocStudioHomeState {
             max: 42,
             divisions: 15,
             label: currentFontSize.round().toString(),
-            onChanged: (double value) => _updateElementField(
-              element,
-              'fontSize',
-              value.round(),
-              'Updated text size.',
-            ),
+            onChanged: (double value) {
+              if (_isTextStyleElement(element)) {
+                _applyFontSizeToSelection(value.round());
+                return;
+              }
+              _updateElementField(
+                element,
+                'fontSize',
+                value.round(),
+                'Updated text size.',
+              );
+            },
           ),
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
-              onPressed: () => _clearBlockFontSize(element),
+              onPressed: () {
+                if (_isTextStyleElement(element)) {
+                  _clearFontSizeForSelection();
+                  return;
+                }
+                _clearBlockFontSize(element);
+              },
               icon: const Icon(Icons.restart_alt),
               label: const Text('Reset text size'),
             ),

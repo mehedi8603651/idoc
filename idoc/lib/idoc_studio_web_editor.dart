@@ -183,7 +183,7 @@ extension _IdocStudioWebEditor on _IdocStudioHomeState {
       case 'requestInsertBlock':
         final elementType = _textValue(payload['elementType']);
         if (elementType.isNotEmpty) {
-          _insertBlockAfterSelection(elementType);
+          _insertBlockAfterSelection(elementType, payload: payload);
         }
         break;
       default:
@@ -268,12 +268,16 @@ extension _IdocStudioWebEditor on _IdocStudioHomeState {
     );
   }
 
-  bool _insertEmbeddedBlockIntoPageDocument(String type) {
+  bool _insertEmbeddedBlockIntoPageDocument(
+    String type, {
+    Map<String, dynamic>? payload,
+  }) {
     if (!_webviewController.value.isInitialized) {
       return false;
     }
 
     final element = _newElement(type);
+    _applyInsertPayloadToElement(element, payload);
     final elementId = _blockId(element);
     _mutateDocument('Inserted ${_labelize(type).toLowerCase()} block.', () {
       _currentPage.elements.add(element);
@@ -288,6 +292,12 @@ extension _IdocStudioWebEditor on _IdocStudioHomeState {
         'elementType': _elementType(element),
         'width': element['width'],
         'preview': _previewForBridge(element),
+        'imageSrc': _elementType(element) == 'image'
+            ? _textValue(element['src'])
+            : '',
+        'imageAlt': _elementType(element) == 'image'
+            ? _textValue(element['alt'])
+            : '',
       },
     );
     _sendWebEditorCommand(

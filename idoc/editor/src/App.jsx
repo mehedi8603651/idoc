@@ -63,7 +63,6 @@ const slashItems = [
   { value: 'button', label: 'Button' },
   { value: 'link', label: 'Link' },
   { value: 'code', label: 'Code' },
-  { value: 'math', label: 'Math' },
   { value: 'image', label: 'Image' },
   { value: 'question', label: 'Question' },
   { value: 'input', label: 'Input' },
@@ -231,20 +230,126 @@ const HorizontalRuleNode = HorizontalRule.extend({
   },
 })
 
-const IdocBlockView = ({ node, selected }) => {
+const IdocBlockView = ({ node, selected, updateAttributes }) => {
   const attrs = node.attrs ?? {}
+  const isImageBlock = attrs.elementType === 'image'
   const preview = attrs.preview || ''
-  const width = typeof attrs.width === 'number' ? `${Math.round(attrs.width * 100)}%` : '100%'
+  const imageSrc = attrs.imageSrc || ''
+  const imageAlt = attrs.imageAlt || 'Image'
+  const widthFactor = normalizedBlockWidth(attrs.width)
+  const width = `${Math.round(widthFactor * 100)}%`
+  const imageFrameRef = useRef(null)
+  const imageRef = useRef(null)
+  const dragStateRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      const state = dragStateRef.current
+      if (!state) {
+        return
+      }
+      window.removeEventListener('pointermove', state.onMove)
+      window.removeEventListener('pointerup', state.onUp)
+      dragStateRef.current = null
+    }
+  }, [])
+
+  const beginResize = direction => event => {
+    if (attrs.elementType !== 'image') {
+      return
+    }
+    event.preventDefault()
+    event.stopPropagation()
+
+    const frameRect = imageFrameRef.current?.getBoundingClientRect()
+    const parentRect = imageFrameRef.current?.closest('.tiptap')?.getBoundingClientRect()
+    const startWidthPx = frameRect?.width ?? 320
+    const editorWidthPx = Math.max(parentRect?.width ?? startWidthPx, 240)
+    const naturalWidth = imageRef.current?.naturalWidth ?? 0
+    const naturalHeight = imageRef.current?.naturalHeight ?? 0
+    const aspectRatio = naturalWidth > 0 && naturalHeight > 0
+      ? naturalWidth / naturalHeight
+      : 1.6
+
+    const handleMove = moveEvent => {
+      const horizontalDelta = (moveEvent.clientX - event.clientX) * direction
+      const verticalDelta = (moveEvent.clientY - event.clientY) * direction * aspectRatio
+      const delta = Math.abs(horizontalDelta) >= Math.abs(verticalDelta)
+        ? horizontalDelta
+        : verticalDelta
+      const nextWidthPx = clamp(startWidthPx + delta, 180, editorWidthPx)
+      updateAttributes({
+        width: Number((nextWidthPx / editorWidthPx).toFixed(4)),
+      })
+    }
+
+    const handleUp = () => {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+      dragStateRef.current = null
+    }
+
+    dragStateRef.current = { onMove: handleMove, onUp: handleUp }
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+  }
+
   return (
     <NodeViewWrapper
-      className={`idoc-block-card${selected ? ' is-selected' : ''}`}
+      className={`idoc-block-card${selected ? ' is-selected' : ''}${isImageBlock ? ' is-image-block' : ''}`}
       style={{ width }}
       data-element-id={attrs.elementId || ''}
       data-element-type={attrs.elementType || ''}
       contentEditable={false}
     >
-      <div className="idoc-block-badge">{labelize(attrs.elementType || 'block')}</div>
-      {preview ? <div className="idoc-block-preview">{preview}</div> : null}
+      {!isImageBlock ? (
+        <div className="idoc-block-badge">{labelize(attrs.elementType || 'block')}</div>
+      ) : null}
+      {isImageBlock && imageSrc ? (
+        <div className="idoc-block-image-frame-wrap">
+          <div
+            ref={imageFrameRef}
+            className="idoc-block-image-frame"
+          >
+            <img
+              ref={imageRef}
+              className="idoc-block-image"
+              src={imageSrc}
+              alt={imageAlt}
+              draggable={false}
+            />
+          </div>
+          {selected ? (
+            <>
+              <button
+                type="button"
+                className="idoc-image-resize-handle is-top-left"
+                aria-label="Resize image proportionally from top left"
+                onPointerDown={beginResize(-1)}
+              />
+              <button
+                type="button"
+                className="idoc-image-resize-handle is-top-right"
+                aria-label="Resize image proportionally from top right"
+                onPointerDown={beginResize(1)}
+              />
+              <button
+                type="button"
+                className="idoc-image-resize-handle is-bottom-right"
+                aria-label="Resize image proportionally from bottom right"
+                onPointerDown={beginResize(1)}
+              />
+              <button
+                type="button"
+                className="idoc-image-resize-handle is-bottom-left"
+                aria-label="Resize image proportionally from bottom left"
+                onPointerDown={beginResize(-1)}
+              />
+            </>
+          ) : null}
+        </div>
+      ) : null}
+      {preview && !isImageBlock ? <div className="idoc-block-preview">{preview}</div> : null}
     </NodeViewWrapper>
   )
 }
@@ -267,6 +372,12 @@ const IdocBlockNode = Node.create({
         default: 1,
       },
       preview: {
+        default: '',
+      },
+      imageSrc: {
+        default: '',
+      },
+      imageAlt: {
         default: '',
       },
     }
@@ -299,6 +410,14 @@ function labelize(value) {
   }
   const normalized = value.replace(/[_-]+/g, ' ')
   return normalized.charAt(0).toUpperCase() + normalized.slice(1)
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value))
+}
+
+function normalizedBlockWidth(value) {
+  return typeof value === 'number' ? clamp(value, 0.2, 1) : 1
 }
 
 function readFlutterMessage(event) {
@@ -350,6 +469,7 @@ function clearSlashTrigger(editor) {
 }
 
 function applyStyle(editor, style) {
+  ensureSelection(editor)
   const chain = editor.chain().focus()
   switch (style) {
     case 'heading-1':
@@ -374,6 +494,122 @@ function applyStyle(editor, style) {
       chain.setParagraph().run()
       return
   }
+}
+
+function isFontSizeNode(node) {
+  const type = node?.type?.name
+  return (
+    type === 'paragraph' ||
+    type === 'heading' ||
+    type === 'blockquote' ||
+    type === 'bulletList' ||
+    type === 'orderedList'
+  )
+}
+
+function ensureSelection(editor) {
+  if (!editor) {
+    return false
+  }
+  const selection = editor.state.selection
+  if (selection) {
+    return true
+  }
+  editor.commands.focus('end')
+  return true
+}
+
+function clipboardImageFile(event) {
+  const items = Array.from(event?.clipboardData?.items ?? [])
+  for (const item of items) {
+    if (typeof item.type === 'string' && item.type.startsWith('image/')) {
+      return item.getAsFile()
+    }
+  }
+  return null
+}
+
+function imageFileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '')
+    reader.onerror = () => reject(reader.error ?? new Error('Could not read pasted image.'))
+    reader.readAsDataURL(file)
+  })
+}
+
+function clipboardImageAlt(file) {
+  const rawName = typeof file?.name === 'string' ? file.name.trim() : ''
+  if (!rawName) {
+    return 'Pasted image'
+  }
+  const withoutExtension = rawName.replace(/\.[^.]+$/, '').trim()
+  return withoutExtension || 'Pasted image'
+}
+
+async function postClipboardImageToFlutter(file) {
+  try {
+    const imageDataUrl = await imageFileToDataUrl(file)
+    if (!imageDataUrl.startsWith('data:image/')) {
+      return false
+    }
+    postToFlutter({
+      type: 'requestInsertBlock',
+      payload: {
+        elementType: 'image',
+        imageDataUrl,
+        alt: clipboardImageAlt(file),
+      },
+    })
+    return true
+  } catch (error) {
+    console.warn('Could not import pasted image', error)
+    return false
+  }
+}
+
+function topLevelNodesInSelection(editor, predicate) {
+  const selection = editor.state.selection
+  if (!selection) {
+    return []
+  }
+
+  const { from, to, empty } = selection
+  const result = []
+
+  editor.state.doc.forEach((node, offset) => {
+    if (!predicate(node)) {
+      return
+    }
+    const start = offset
+    const end = offset + node.nodeSize
+    const overlaps = empty
+      ? from >= start && from <= end
+      : from < end && to > start
+    if (overlaps) {
+      result.push({ node, pos: offset })
+    }
+  })
+
+  return result
+}
+
+function applyFontSize(editor, fontSize) {
+  ensureSelection(editor)
+  const targets = topLevelNodesInSelection(editor, isFontSizeNode)
+  if (!targets.length) {
+    return false
+  }
+
+  const transaction = editor.state.tr
+  targets.forEach(({ node, pos }) => {
+    const attrs = { ...(node.attrs ?? {}) }
+    attrs.fontSize = typeof fontSize === 'number' ? fontSize : null
+    transaction.setNodeMarkup(pos, undefined, attrs, node.marks)
+  })
+  editor.view.dispatch(transaction)
+  postSelection(editor)
+  return true
 }
 
 function findElementNodePosition(editor, elementId) {
@@ -465,6 +701,15 @@ export default function App() {
       attributes: {
         class: 'idoc-editor-surface',
       },
+      handlePaste(view, event) {
+        const imageFile = clipboardImageFile(event)
+        if (!imageFile) {
+          return false
+        }
+        event.preventDefault()
+        void postClipboardImageToFlutter(imageFile)
+        return true
+      },
     },
     onCreate({ editor }) {
       normalizeTopLevelIds(editor)
@@ -532,7 +777,14 @@ export default function App() {
         case 'applyTextStyle':
           applyStyle(editor, payload.style || 'paragraph')
           break
+        case 'applyFontSize':
+          applyFontSize(
+            editor,
+            typeof payload.fontSize === 'number' ? payload.fontSize : null,
+          )
+          break
         case 'insertBlock':
+          ensureSelection(editor)
           editor.chain().focus().insertContent({
             type: 'idocBlock',
             attrs: {
@@ -540,8 +792,11 @@ export default function App() {
               elementType: payload.elementType,
               width: typeof payload.width === 'number' ? payload.width : 1,
               preview: payload.preview || '',
+              imageSrc: payload.imageSrc || '',
+              imageAlt: payload.imageAlt || '',
             },
           }).run()
+          postSelection(editor)
           break
         case 'setTheme':
           setTheme(payload.theme === 'dark' ? 'dark' : 'light')

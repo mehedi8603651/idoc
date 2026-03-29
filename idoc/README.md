@@ -58,6 +58,8 @@ cd D:\idoc\idoc
 flutter run -d windows
 ```
 
+Because Flutter loads the built editor from `assets/editor/index.html`, editor changes need a full app restart. Hot reload is not enough after rebuilding the bundled WebView asset.
+
 ## Architecture
 
 ### 1. Canonical document model
@@ -130,7 +132,59 @@ Reader/runtime assets:
 Responsibilities:
 
 - power the exported `.idoc.html`
-- render pages, toolbar, search, theme, popup/actions, math, quiz logic
+- render pages, toolbar, search, theme, popup/actions, inline math, images, quiz logic
+
+## Current Editor And Export Behavior
+
+These are the important authoring/runtime rules right now.
+
+- Normal writing happens in the embedded Tiptap editor inside the Windows app.
+- Raw JSON stays available in Flutter for advanced edits and AI-assisted fixes.
+- Clipboard image paste creates canonical `image` blocks with embedded data URIs.
+- Image resize in the editor is proportional from the corner handles.
+- Exported `.idoc.html` defaults images to full width unless the image block was explicitly resized.
+- Inline math should be written inside normal text with `$...$` or `$$...$$`.
+- Old standalone `math` blocks still load and export for compatibility, but new authoring is text-first.
+- Fresh exports pick up the latest runtime CSS and behavior. Old exported `.idoc.html` files do not update automatically.
+
+## Bundled Demo
+
+The bundled sample content lives in:
+
+- [assets/demo_document.json](D:\idoc\idoc\assets\demo_document.json)
+
+It is the source for:
+
+- [..\example.idoc.html](D:\idoc\example.idoc.html)
+
+The current demo is meant to exercise the modern workflow:
+
+- page 1: overview, popup action, inline math inside normal text
+- page 2: image block, runtime layout, code sample, theme toggle
+- page 3: question block, answer reveal, save/export actions
+
+If you change the demo JSON or the runtime template, regenerate the sample export:
+
+```powershell
+cd D:\idoc\idoc
+@'
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:idoc/idoc_document.dart';
+import 'package:idoc/idoc_exporter.dart';
+
+void main() {
+  final template = File('assets/idoc_runtime_template.html').readAsStringSync();
+  final demoJson = jsonDecode(File('assets/demo_document.json').readAsStringSync()) as Map<String, dynamic>;
+  final document = IdocDocument.fromJson(demoJson);
+  final html = buildRuntimeHtml(template: template, document: document);
+  File(r'..\\example.idoc.html').writeAsStringSync(html);
+}
+'@ | Set-Content .tmp_regen_example.dart
+dart run .tmp_regen_example.dart
+Remove-Item .tmp_regen_example.dart
+```
 
 ## How It Works
 
@@ -197,6 +251,8 @@ Examples:
 - selection handling
 - embedded block rendering in the editor
 - text style commands
+- clipboard image paste and proportional image resize
+- image node selection outlines and resize handles
 
 ### If you want to add a new block type
 
@@ -242,6 +298,8 @@ Examples:
 - runtime search/theme behavior
 - page layout in exported HTML
 - popup/action handling
+- image sizing and spacing in exported output
+- inline math rendering behavior
 
 ### If you want to change parsing/default document behavior
 
@@ -265,6 +323,7 @@ Current Flutter -> Web commands are handled in [idoc_studio_web_editor.dart](D:\
 - `replacePageBody`
 - `focusEditor`
 - `applyTextStyle`
+- `applyFontSize`
 - `insertBlock`
 - `setTheme`
 - `selectElement`
@@ -301,6 +360,8 @@ npm run build
 - The web editor is bundled locally; there is no server dependency.
 - Flutter does not own the live text editing experience anymore; it owns document structure and export.
 - Special blocks are still primarily configured in Flutter inspector panels, not fully edited inline in Tiptap.
+- Image crop is not implemented. Image resize is proportional, closer to Word-style sizing than to a crop tool.
+- Runtime/export visual polish still needs ongoing refinement when new block layouts are introduced.
 
 ## Recommended Next Work
 
@@ -311,4 +372,5 @@ High-value next areas:
 - improve embedded block placeholders inside the editor
 - expand adapter tests for round-trip safety
 - add more runtime/export tests around special blocks and actions
+- add a dedicated export regression pass for image, spacing, and small-layout cases
 - reduce Windows-only assumptions if you later want cross-platform authoring

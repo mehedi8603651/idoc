@@ -128,6 +128,30 @@ extension _IdocStudioLogic on _IdocStudioHomeState {
     );
   }
 
+  void _applyFontSizeToSelection(int fontSize) {
+    final element = _selectedElement;
+    if (element == null || !_isTextStyleElement(element)) {
+      return;
+    }
+    _setStatus('Updated text size.');
+    _sendWebEditorCommand(
+      'applyFontSize',
+      payload: <String, dynamic>{'fontSize': fontSize},
+    );
+  }
+
+  void _clearFontSizeForSelection() {
+    final element = _selectedElement;
+    if (element == null || !_isTextStyleElement(element)) {
+      return;
+    }
+    _setStatus('Reset text size.');
+    _sendWebEditorCommand(
+      'applyFontSize',
+      payload: const <String, dynamic>{'fontSize': null},
+    );
+  }
+
   Map<String, dynamic> _newElement(String type) {
     final element = createDefaultElement(type);
     element['_editorId'] = createUniqueId('block', _allBlockIds());
@@ -162,10 +186,35 @@ extension _IdocStudioLogic on _IdocStudioHomeState {
     }
   }
 
+  void _applyInsertPayloadToElement(
+    Map<String, dynamic> element,
+    Map<String, dynamic>? payload,
+  ) {
+    if (payload == null || payload.isEmpty) {
+      return;
+    }
 
-  void _insertBlockAfterSelection(String type) {
+    switch (_elementType(element)) {
+      case 'image':
+        final imageDataUrl = _textValue(payload['imageDataUrl']);
+        if (!imageDataUrl.startsWith('data:image/')) {
+          return;
+        }
+        element['src'] = imageDataUrl;
+        element['alt'] = _textValue(payload['alt'], fallback: 'Pasted image');
+        element.putIfAbsent('caption', () => '');
+        break;
+      default:
+        break;
+    }
+  }
+
+  void _insertBlockAfterSelection(
+    String type, {
+    Map<String, dynamic>? payload,
+  }) {
     if (_isInsertSpecialBlockType(type) &&
-        _insertEmbeddedBlockIntoPageDocument(type)) {
+        _insertEmbeddedBlockIntoPageDocument(type, payload: payload)) {
       _setStatus('Inserted ${_labelize(type).toLowerCase()} block.');
       return;
     }

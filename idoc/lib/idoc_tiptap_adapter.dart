@@ -131,6 +131,8 @@ Map<String, dynamic>? _idocElementToTiptapNode(Map<String, dynamic> element) {
           'elementType': type,
           'width': _widthValue(element['width'], fallback: 1),
           'preview': _previewForElement(element),
+          'imageSrc': type == 'image' ? _textValue(element['src']) : '',
+          'imageAlt': type == 'image' ? _textValue(element['alt']) : '',
         },
       };
   }
@@ -249,6 +251,15 @@ Map<String, dynamic>? _tiptapNodeToIdocElement({
       block
         ..['type'] = elementType
         ..['_editorId'] = elementId;
+      final width = _widthValue(attrs['width'], fallback: 1);
+      if (width >= 0.995) {
+        block.remove('width');
+      } else {
+        block['width'] = width;
+      }
+      if (block['type'] == 'image') {
+        block.remove('height');
+      }
       if (block['type'] == 'question') {
         final currentId = _textValue(block['id']);
         if (currentId.isEmpty || usedQuestionIds.contains(currentId)) {
@@ -409,6 +420,7 @@ double _widthValue(dynamic value, {double fallback = 1}) {
   }
   return fallback;
 }
+
 
 List<String> _stringList(dynamic value) {
   if (value is List) {

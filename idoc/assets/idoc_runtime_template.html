@@ -76,7 +76,7 @@
     .reader-inner { width: min(920px, 100%); margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
     .page { background: var(--page); border-radius: 24px; border: 1px solid color-mix(in srgb, var(--page-border) 78%, transparent 22%); padding: 24px 24px 18px; min-height: 360px; display: flex; flex-direction: column; box-shadow: var(--shadow); }
     .page h2 { margin: 0 0 24px; font-size: clamp(1.8rem, 3vw, 2.4rem); letter-spacing: -.04em; }
-    .content { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; flex: 1 1 auto; }
+    .content { display: flex; flex-wrap: wrap; column-gap: 18px; row-gap: 8px; align-items: flex-start; align-content: flex-start; flex: 1 1 auto; }
     .content > * { flex: 1 1 100%; min-width: 0; max-width: 100%; }
     .text-stack { display: flex; flex-direction: column; gap: 0; flex: 1 1 100%; min-width: 0; max-width: 100%; }
     .page-number { margin-top: 18px; align-self: center; color: var(--muted); font-size: .92rem; letter-spacing: .18em; }
@@ -120,7 +120,11 @@
     .callout h3 { margin: 0 0 8px; }
     .code { margin: 0; padding: 16px 18px; border-radius: 18px; background: #101718; color: #eff7f5; overflow: auto; font-family: Consolas, monospace; font-size: .92rem; line-height: 1.6; }
     .quote { margin: 0; padding-left: 18px; border-left: 3px solid var(--accent); }
-    .figure img { width: 100%; border-radius: 18px; border: 1px solid color-mix(in srgb, var(--page-border) 74%, transparent 26%); }
+    .figure { display: flex; flex-direction: column; gap: 6px; width: 100%; align-items: flex-start; }
+    .figure-body { display: flex; flex-direction: column; gap: 6px; align-items: stretch; min-width: 0; max-width: 100%; }
+    .figure-media { display: block; width: 100%; overflow: visible; border-radius: 18px; border: 0; background: transparent; }
+    .figure img { display: block; width: 100%; height: auto; border-radius: 18px; border: 0; }
+    .figure-media img { height: auto; object-fit: contain; border: 0; border-radius: 18px; }
     .caption, .help, .cite { color: var(--muted); font-size: .92rem; }
     .link, .action { display: inline-flex; align-items: center; gap: 8px; width: fit-content; min-height: 44px; padding: 10px 16px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--page-border) 72%, transparent 28%); background: var(--surface-soft); color: var(--text); cursor: pointer; text-decoration: none; }
     .action.primary { background: var(--accent); color: #fff; border-color: transparent; }
@@ -403,13 +407,17 @@ __IDOC_JSON__
         }
         if (type === 'image') {
           const wrap = el('figure', { className: 'figure' });
-          wrap.appendChild(el('img', { src: text(element.src, ''), alt: text(element.alt, '') }));
+          const body = el('div', { className: 'figure-body' });
+          const media = el('div', { className: 'figure-media' });
+          applyInlineWidth(body, element);
+          media.appendChild(el('img', { src: text(element.src, ''), alt: text(element.alt, '') }));
+          body.appendChild(media);
           if (element.caption) {
             const caption = el('figcaption', { className: 'caption' });
             setRichText(caption, text(element.caption, ''), true);
-            wrap.appendChild(caption);
+            body.appendChild(caption);
           }
-          applyBlockWidth(wrap, element);
+          wrap.appendChild(body);
           return wrap;
         }
         if (type === 'button' || type === 'link') {
@@ -830,17 +838,28 @@ __IDOC_JSON__
         const factor = normalizedWidth(number(element && element.width));
         if (!factor) return;
         const basis = blockBasis(factor);
-        node.style.flex = `0 1 ${basis}`;
+        node.style.flex = `0 0 ${basis}`;
+        node.style.width = basis;
         node.style.maxWidth = basis;
       }
       function normalizedWidth(value) {
         if (!value) return 1;
-        return Math.max(0.34, Math.min(1, value));
+        return Math.max(0.2, Math.min(1, value));
       }
       function blockBasis(factor) {
-        if (factor >= 0.995) return '100%';
-        const shrink = (1 - factor) * 18;
-        return `calc(${(factor * 100).toFixed(2)}% - ${shrink.toFixed(2)}px)`;
+        return `${(factor * 100).toFixed(2)}%`;
+      }
+      function applyInlineWidth(node, element) {
+        const raw = number(element && element.width);
+        if (!raw) {
+          node.style.width = '100%';
+          node.style.maxWidth = '100%';
+          return;
+        }
+        const factor = normalizedWidth(raw);
+        const basis = blockBasis(factor);
+        node.style.width = basis;
+        node.style.maxWidth = basis;
       }
       function int(value, fallback) { const parsed = Number.parseInt(value, 10); return Number.isFinite(parsed) ? parsed : fallback; }
       function number(value) { const parsed = Number.parseFloat(value); return Number.isFinite(parsed) ? parsed : null; }

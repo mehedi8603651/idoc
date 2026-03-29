@@ -32,6 +32,23 @@ cd D:\idoc\idoc
 flutter run -d windows
 ```
 
+## Bundled Demo
+
+The bundled sample document source is:
+
+- [demo_document.json](/d:/idoc/idoc/assets/demo_document.json)
+
+The regenerated browser sample is:
+
+- [example.idoc.html](/d:/idoc/example.idoc.html)
+
+The current demo covers:
+
+- inline math inside normal text
+- popup and link actions
+- self-contained image export
+- question/reveal/export runtime behavior
+
 ## What The Flutter App Does
 
 - visual page and block editing
